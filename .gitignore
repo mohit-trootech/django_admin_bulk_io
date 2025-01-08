@@ -6,6 +6,9 @@
 # Node artifact files
 node_modules/
 
+# Databases
+db.sqlite3
+
 # Virtual Envs
 .venv/*
 .env/*

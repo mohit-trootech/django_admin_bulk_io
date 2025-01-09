@@ -59,14 +59,9 @@ Thumbs.db
 *user_qualification_certificate/
 *temp/
 
-hr_management/media/user_agreements/Screenshot_from_2020-09-11_16-16-47.png
-hr_management/media/user_agreements/*
-hr_management/media/user_qualification_certificate/*
-hr_management/media/profile_images/Screenshot_from_2020-09-01_17-18-04.png
-hr_management/media/profile_images/*
-hr_management/media/cv_resume_files/*
-hr_management/media/broadcast_attachments/*
-hr_management/media/*
+
+/media/*
+django_admin_bulk_io/media/*
 
 # coverage for unit test
 /coverage.data

@@ -1,7 +1,7 @@
 from os.path import join
 from pathlib import Path
 
-from dj_database_url import parse
+from dj_database_url import config
 from django.utils.timezone import timedelta  # noqa
 
 from utils.constants import Settings, EmailConfig, CeleryConfig
@@ -9,6 +9,7 @@ from utils.constants import Settings, EmailConfig, CeleryConfig
 # Build paths inside the project like this: BASE_DIR / 'subdir'.
 BASE_DIR = Path(__file__).resolve().parent.parent
 APPEND_SLASH = True
+ROOT_URLCONF = Settings.ROOT_URLCONF
 
 admins = (("Mohit Prajapat", """mohit.prajapat@trootech.com"""),)
 
@@ -72,7 +73,7 @@ WSGI_APPLICATION = Settings.WSGI_APPLICATION
 
 # Database
 # https://docs.djangoproject.com/en/5.1/ref/settings/#databases
-DATABASES = {"default": parse(Settings.DATABASE_URL)}
+DATABASES = {"default": config(default=Settings.DATABASE_URL)}
 
 # Password validation
 # https://docs.djangoproject.com/en/5.1/ref/settings/#auth-password-validators

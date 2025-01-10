@@ -27,13 +27,13 @@ DJANGO_APPS = [
     "django.contrib.staticfiles",
 ]
 
-PROJECT_APPS = []
+PROJECT_APPS = ["bulk_io_test.apps.BulkIoTestConfig", "django_admin_bulk_io"]
 
 # Third Party Apps
 THIRD_PARTY_APPS = []
 
 
-INSTALLED_APPS = DJANGO_APPS + PROJECT_APPS + THIRD_PARTY_APPS
+INSTALLED_APPS = THIRD_PARTY_APPS + PROJECT_APPS + DJANGO_APPS
 
 
 # Middlewares
@@ -54,7 +54,8 @@ ROOT_URLCONF = Settings.ROOT_URLCONF
 TEMPLATES = [
     {
         "BACKEND": "django.template.backends.django.DjangoTemplates",
-        "DIRS": [join(BASE_DIR, Settings.TEMPLATES)],
+        "DIRS": [],
+        # "DIRS": [join(BASE_DIR, Settings.TEMPLATES)],
         "APP_DIRS": True,
         "OPTIONS": {
             "context_processors": [

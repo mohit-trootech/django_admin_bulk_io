@@ -1,3 +1,12 @@
-from django.contrib import admin
+from django.contrib.admin import  register
+from django_admin_bulk_io.bulk_io import BulkIO
+from utils.utils import get_model
 
-# Register your models here.
+Comment = get_model(app_label="bulk_io_test", model_name="Comment")
+
+
+@register(Comment)
+class CommentAdmin(BulkIO):
+    list_display = ("title", "created", "status")
+    list_filter = ("created", "status")
+

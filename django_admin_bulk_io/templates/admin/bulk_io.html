@@ -1,0 +1,17 @@
+{% extends "admin/base_site.html" %}
+{% load i18n admin_urls static admin_list %}
+{% block title %}Mohit{%endblock%}
+{% block extrastyle %}
+{{block.super}}
+<link rel="stylesheet" href="{% static 'css/bootstrap.min.css' %}">
+{% endblock %}
+{% block extrahead %}
+{{block.super}}
+<script src="{% static 'js/bootstrap.min.js' %}"></script>
+<script src="{% static 'js/popper.min.js' %}"></script>
+{% endblock %}
+{% block content %}
+<div class="px-5">
+    {% include 'admin/bulk_io_breadcrumbs.html' %}
+</div>
+{% endblock %}

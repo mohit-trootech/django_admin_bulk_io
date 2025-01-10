@@ -1,0 +1,23 @@
+<button type="button" class="btn-admin-modal btn-primary" data-bs-toggle="modal" data-bs-target="#bulkIoAdminModal">
+    {% block bulk-io-admin-btn-title %}{% endblock %}
+</button>
+<div class="modal fade" id="bulkIoAdminModal" tabindex="0" aria-labelledby="bulkIoAdminModalLabel" aria-hidden="true">
+    <div class="modal-dialog">
+        <div class="modal-content">
+            <div class="modal-header">
+                <h1 class="modal-title" id="bulkIoAdminModalLabel">{% block admin-modal-title %}Bulk IO{% endblock %}
+                </h1>
+                <button type="button" class="btn-close" data-bs-dismiss="modal" aria-label="Close"></button>
+            </div>
+            <div class="modal-body">
+                {% block bulk-io-admin-modal-content %}
+                This is My Modal Content
+                {% endblock %}
+            </div>
+            <div class="modal-footer">
+                <button type="button" class="btn-admin-modal btn-secondary" data-bs-dismiss="modal">Close</button>
+                <button type="button" class="btn-admin-modal btn-primary">Save changes</button>
+            </div>
+        </div>
+    </div>
+</div>

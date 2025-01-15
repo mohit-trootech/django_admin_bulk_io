@@ -1,1 +1,11 @@
 {% extends 'admin/bulk_io.html' %}
+{% load i18n admin_urls static admin_list %}
+
+{% block title %}Bulk IO{%endblock%}
+
+{% block content %}
+<div class="border container">
+    {{block.super}}
+    {% include 'django_admin_bulk_io/context_data_bulk_io.html' %}
+</div>
+{% endblock %}

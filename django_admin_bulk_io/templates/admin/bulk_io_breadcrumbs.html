@@ -1,7 +1,18 @@
+{% load i18n admin_urls %}
 <nav aria-label="breadcrumb">
-    <ol class="breadcrumb">
-        <li class="breadcrumb-item"><a href="#">Home</a></li>
-        <li class="breadcrumb-item"><a href="#">Library</a></li>
-        <li class="breadcrumb-item active" aria-current="page">Data</li>
-    </ol>
+  <ol class="breadcrumb">
+    <li class="breadcrumb-item"><a href="{% url 'admin:index' %}">Home</a></li>
+    <li class="breadcrumb-item">
+      <a
+        href="{% url 'admin:app_list' app_label=app_label"
+        >{{app_label}}</a
+      >
+    </li>
+    <li class="breadcrumb-item">
+      <a
+        href="/admin/{{app_label}}/{{model_name}}">{{model_name}}</a
+      >
+    </li>
+    <li class="breadcrumb-item active" aria-current="page">{{action}}</li>
+  </ol>
 </nav>

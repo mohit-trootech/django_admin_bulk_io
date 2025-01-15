@@ -1,0 +1,29 @@
+<h1>Bulk IO</h1>
+<p>This page allows you to export data from the database.</p>
+<p>Please select the fields you want to export.</p>
+
+<form method="post">
+    {% csrf_token %}
+    {{form.as_p}}
+    <button type="submit" class="btn btn-primary">Export</button>
+</form>
+<table class="table">
+    <thead>
+        <tr>
+            {% for field in model_fields %}
+            <th scope="col">{{field.name|title}}</th>
+            {% endfor %}
+        </tr>
+    </thead>
+    <tbody>
+        {% for obj in object_list %}
+        <tr>
+            {% for field in model_fields %}
+            {% with field_name=field.name %}
+            <td>{{obj.field_name}}</td>
+            {% endwith %}
+            {% endfor %}
+        </tr>
+        {% endfor %}
+    </tbody>
+</table>

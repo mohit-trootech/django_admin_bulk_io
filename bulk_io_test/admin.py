@@ -1,5 +1,5 @@
 from django.contrib.admin import  register
-from django_admin_bulk_io.bulk_io import BulkIOModelAdmin
+from django_admin_bulk_io.admin import BulkIOModelAdmin
 from utils.utils import get_model
 
 Comment = get_model(app_label="bulk_io_test", model_name="Comment")
@@ -9,4 +9,4 @@ Comment = get_model(app_label="bulk_io_test", model_name="Comment")
 class CommentAdmin(BulkIOModelAdmin):
     list_display = ("title", "created", "status")
     list_filter = ("created", "status")
-
+    search_fields = ("title",)

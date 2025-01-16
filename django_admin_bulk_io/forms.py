@@ -1,24 +1,58 @@
-# Bulk IO - Django Based Dynamic Model Form with Filter Fields Based on ModelAdmin filter_queryset attribute
+# Django Admin Bulk I/O Forms
 
 from django import forms
 from django.forms.models import ModelForm
-from django_admin_bulk_io.utils import get_admin_class_for_model_instance
-
+from django_admin_bulk_io.utils.utils import get_admin_class_for_model_instance
+from django_admin_bulk_io.utils.constants import FormFields, InputTypes, FORM_CLASS_BASE
 
 class DynamicExportForm(ModelForm):
-    def __init__(self, model, *args, **kwargs):
-        super().__init__(*args, **kwargs)
-        self.model = model
-        self.admin_class = get_admin_class_for_model_instance(self.model)
-        if self.admin_class is None:
-            raise ValueError("Admin class not found for model %s" % model)
-        model_admin = self.admin_class()
-        self.Meta.model = self.model
 
-        for field in model_admin.model._meta.fields:
-            self.fields[field.name] = forms.BooleanField(
-                required=False, label=field.verbose_name
-            ) 
+    def __init__(self, model, *args, **kwargs):
+        if model:
+            self._meta.model = model
+        super(DynamicExportForm, self).__init__(*args, **kwargs)
+        self.admin_class = get_admin_class_for_model_instance(self._meta.model)
+        if self.admin_class:
+            self.fields = {}
+            for field in list(
+                set(self.admin_class.list_filter + self.admin_class.search_fields)
+            ):
+                field = self._meta.model._meta.get_field(field)
+                if field.get_internal_type() in FormFields.char_accepted():
+                    field_type = forms.CharField
+                    input_type_class = forms.TextInput
+                    input_type_txt = InputTypes.TEXT
+                elif field.choices:
+                    field_type = forms.ChoiceField
+                    input_type_class = forms.Select
+                elif field.get_internal_type() in FormFields.boolean_accepted():
+                    field_type = forms.BooleanField
+                    input_type_class = forms.CheckboxInput
+                else:
+                    continue
+                if field.choices:
+                    self.fields[field.name] = field_type(
+                        choices=field.choices,
+                        widget=input_type_class(
+                            attrs={
+                                "type": input_type_txt,
+                                "class": FORM_CLASS_BASE,
+                                "placeholder": field.verbose_name,
+                            }
+                        ),
+                    )
+                else:
+                    self.fields[field.name] = field_type(
+                        required=False,
+                        widget=input_type_class(
+                            attrs={
+                                "type": input_type_txt,
+                                "class": FORM_CLASS_BASE,
+                                "placeholder": field.verbose_name,
+                            }
+                        ),
+                    )
 
     class Meta:
         model = None
+        fields = []

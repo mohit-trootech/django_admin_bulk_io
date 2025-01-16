@@ -1,4 +1,6 @@
 from django.contrib import admin
+
+
 def get_admin_class_for_model_instance(instance):
     """
     Retrieves the ModelAdmin class associated with a model instance.

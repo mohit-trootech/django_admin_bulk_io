@@ -11,8 +11,10 @@
 <script src="{% static 'js/bootstrap.min.js' %}"></script>
 <script src="{% static 'js/popper.min.js' %}"></script>
 {% endblock %}
+{% block nav-breadcrumbs %}
+    {% include 'admin/bulk_io_breadcrumbs.html' %}
+{% endblock %}
 {% block content %}
 <div class="px-5">
-    {% include 'admin/bulk_io_breadcrumbs.html' %}
 </div>
 {% endblock %}

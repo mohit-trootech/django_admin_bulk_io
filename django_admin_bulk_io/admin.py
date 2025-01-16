@@ -1,4 +1,5 @@
-# Bulk Export Decorator Class
+# Django Admin Bulk I/O Admin
+
 from django.contrib.admin import ModelAdmin
 from django.urls import path
 from django_admin_bulk_io.views import (
@@ -10,6 +11,9 @@ from django_admin_bulk_io.views import (
 class BulkIOModelAdmin(ModelAdmin):
 
     def get_urls(self, *args, **kwargs):
+        """
+        This method overrides existing get_urls method to returns urls for bulk import and export.
+        """
         info = self.opts.app_label, self.opts.model_name
         urls = super(BulkIOModelAdmin, self).get_urls(*args, **kwargs)
         bulk_io_urls = [

@@ -1,14 +1,16 @@
+{%load render_model_fields bulk_io_urls_list %}
 <h1>Bulk IO</h1>
 <p>This page allows you to export data from the database.</p>
 <p>Please select the fields you want to export.</p>
-{%load render_model_fields%}
 {% if form %}
 {% include 'django_admin_bulk_io/export_filters_form.html' with form=form %}
 {%endif%}
-<table class="table table-hover">
-    <thead>
-        <tr>
-            <th>Select</th>
+{%if object_list %}
+<form method="POST" onsubmit="bulkExportSubmit(event,`{% bulk_io_url app_label model_name '%s_%s_bulk_export' %}`)">
+    <table class="table table-hover">
+        <thead>
+            <tr>
+            <th><input type="checkbox" class="form-check-input" name="select-all"></th>
             {% for field in model_fields %}
             <th scope="col">{{field.name|title}}</th>
             {% endfor %}
@@ -18,7 +20,7 @@
         {% for obj in object_list %}
         <tr>
             <th>
-                <input type="checkbox" class="form-check-input" name="instance">
+                <input type="checkbox" class="form-check-input" name="instance" value="{{obj.id}}">
             </th>
             {% for field in model_fields %}
             <td>{% render_model_fields obj field.name %}</td>
@@ -27,4 +29,14 @@
         {% endfor %}
     </tbody>
 </table>
-<button class="btn btn-primary col-12">Export Data</button>
+<div class="d-flex flex-column gap-2">
+    <small class="text-muted text-start text-capitalize">please select all the items you want to export</small>
+    <button type="submit" class="btn btn-primary col-12">Export Data</button>
+</div>
+</form>
+{% else %}
+<div class="alert alert-primary" role="alert">
+    <h4 class="alert-heading">Not Found!</h4>
+    <p>No objects found. Please refine your search criteria.</p>
+</div>
+{% endif %}

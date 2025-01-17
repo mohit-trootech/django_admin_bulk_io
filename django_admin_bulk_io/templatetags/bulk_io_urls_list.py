@@ -2,7 +2,7 @@ from django.template import Library
 from django import template
 from django.urls import reverse
 from django.utils.safestring import mark_safe
-from django_admin_bulk_io.utils.constants import Exception
+
 register = Library()
 
 def bulk_io_reverse(app_label, model_name, path_template:str):
@@ -20,7 +20,12 @@ def do_bulk_io_urls(*args):
     """
     app_label, model_name = args
     return BulkIOUrlsNode(app_label, model_name).render()
-   
+
+@register.simple_tag
+def bulk_io_url(app_label, model_name, path_template:str):
+    """returns bulk io url reverse based on app_label & model_name directly"""
+    url = bulk_io_reverse(app_label, model_name, path_template)
+    return url
 
 
 class BulkIOUrlsNode(template.Node):
@@ -43,6 +48,5 @@ class BulkIOUrlsNode(template.Node):
             """
             % (url_import, url_export)
         )
-        except ValueError as ve:
-            print(Exception.ERROR_URL_REVERSE.format(ve=ve))
-            return mark_safe()
+        except Exception:
+            return ""

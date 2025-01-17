@@ -3,9 +3,14 @@
 from django import forms
 from django.forms.models import ModelForm
 from django_admin_bulk_io.utils.utils import get_admin_class_for_model_instance
-from django_admin_bulk_io.utils.constants import FormFields, InputTypes, FORM_CLASS_BASE
+from django_admin_bulk_io.utils.constants import (
+    FormFields,
+    InputTypes,
+    FORM_CLASS_BASE,
+)
 
 class DynamicExportForm(ModelForm):
+ 
 
     def __init__(self, model, *args, **kwargs):
         if model:
@@ -13,15 +18,11 @@ class DynamicExportForm(ModelForm):
         super(DynamicExportForm, self).__init__(*args, **kwargs)
         self.admin_class = get_admin_class_for_model_instance(self._meta.model)
         if self.admin_class:
-            self.fields = {}
-            for field in list(
-                set(self.admin_class.list_filter + self.admin_class.search_fields)
-            ):
+            for field in self.admin_class.list_filter:
                 field = self._meta.model._meta.get_field(field)
                 if field.get_internal_type() in FormFields.char_accepted():
                     field_type = forms.CharField
                     input_type_class = forms.TextInput
-                    input_type_txt = InputTypes.TEXT
                 elif field.choices:
                     field_type = forms.ChoiceField
                     input_type_class = forms.Select
@@ -35,7 +36,7 @@ class DynamicExportForm(ModelForm):
                         choices=field.choices,
                         widget=input_type_class(
                             attrs={
-                                "type": input_type_txt,
+                                "type": InputTypes.TEXT,
                                 "class": FORM_CLASS_BASE,
                                 "placeholder": field.verbose_name,
                             }
@@ -46,7 +47,7 @@ class DynamicExportForm(ModelForm):
                         required=False,
                         widget=input_type_class(
                             attrs={
-                                "type": input_type_txt,
+                                "type": InputTypes.TEXT,
                                 "class": FORM_CLASS_BASE,
                                 "placeholder": field.verbose_name,
                             }

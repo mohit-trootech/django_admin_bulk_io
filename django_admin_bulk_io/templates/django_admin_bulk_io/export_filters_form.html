@@ -1,4 +1,8 @@
-<form method="get" action="">
+<form method="GET">
+    <div class="form-floating mb-3">
+        <input type="text" class="form-control bg-light text-dark" placeholder="Search" name="q" />
+        <label>Search</label>
+    </div>
     {% for field in form.visible_fields %}
     {% if form.errors %}
     {% for field in form %}
@@ -48,5 +52,13 @@
     </div>
     {% endif %}
     {% endfor %}
-    <button type="submit" class="btn btn-primary col-12 mb-3">Filter Data</button>
+    <div class="d-flex gap-2 justify-content-between align-items-center mb-3">
+        <button type="submit" class="btn btn-primary w-50">Filter Data</button>
+        <button type="button" class="btn btn-primary w-50" onclick="resetFilter()">Reset Filter</button>
+    </div>
 </form>
+<script>
+    const resetFilter = () => {
+        window.location.href  =`${window.location.pathname}`
+    }
+</script>

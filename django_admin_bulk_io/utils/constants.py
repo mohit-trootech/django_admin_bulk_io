@@ -1,7 +1,7 @@
 # Django Admin Bulk I/O Constants
 
 FORM_CLASS_BASE = "form-control bg-light text-dark"
-
+FILE_NAME_TEMPLATE = "{base_path}/bulk_io/{app_label}/{model_name}/"
 
 class Templates:
     """Bulk IO - Templates"""
@@ -27,6 +27,10 @@ class InputTypes:
         """
         return [cls.CSV, cls.XLSX, cls.JSON]
 
+
+class FormLabels:
+    """Bulk IO = Form Labels"""
+    SEARCH = "Search"
 
 class FormFields:
     """Bulk IO - Form Filter Fields"""
@@ -76,8 +80,12 @@ class FormFields:
         """
         return [cls.TEXT_FIELD, cls.CHAR_FIELD]
 
+class BulkIOMessages:
+    """Bulk IO - Success Messages"""
+    CSV_CREATED_SUCCESSFULLY = "CSV Created Successfully, View 'bulk_io' folder."
 
-class Exception:
+class BulkIOException:
     """Bulk IO - Exceptions"""
 
-    ERROR_URL_REVERSE = "Error reversing URL: {ve}"
+    ERROR_URL_REVERSE = "Error reversing URL: {ve}."
+    REQUEST_BODY_EMPTY = "Request body is empty."

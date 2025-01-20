@@ -15,14 +15,17 @@
 <script src="{% static 'js/bulkUtils.js' %}"></script>
 {% endblock %}
 {% block nav-breadcrumbs %}
-    {% include 'admin/bulk_io_breadcrumbs.html' %}
+{% include 'admin/bulk_io_breadcrumbs.html' %}
 {% endblock %}
 {% block content %}
 <div class="toast-container position-fixed bottom-0 end-0 p-3">
-    <div id="bulkIOLiveToast" class="toast align-items-center text-bg-primary border-0" role="alert" aria-live="assertive" aria-atomic="true">
+    <div id="bulkIOLiveToast" class="toast {% if messages %}show{%endif%} align-items-center text-bg-primary border-0"
+        role="alert" aria-live="assertive" aria-atomic="true">
         <div class="d-flex">
             <div class="toast-body">
-                Hello, world! This is a toast message.
+                {% for message in messages %}
+                {{ message }}
+                {% endfor %}
             </div>
             <button type="button" class="btn-close btn-close-white me-2 m-auto" data-bs-dismiss="toast"
                 aria-label="Close"></button>

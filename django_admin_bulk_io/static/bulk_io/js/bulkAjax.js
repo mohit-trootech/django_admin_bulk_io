@@ -1,5 +1,9 @@
 /* Bulk IO Ajax Request Ultility */
 
+const bulkIOGetRequest = (url, callback) => {
+  bulkIoAjaxRequest(url, "GET", null, callback)
+}
+
 const bulkIOPostRequest = (url, data, callback) => {
   bulkIoAjaxRequest(url, "POST", data, callback);
 };
@@ -10,16 +14,15 @@ const bulkIoAjaxRequest = (url, type, data, callback) => {
     url: url,
     type: type,
     data: data,
-    contentType: "application/json",
-    processData: false,
-    contentType: false,
     success: (responseData) => {
+      console.log(responseData)
       callback && callback(responseData);
     },
     error: (error) => {
-      bulkIoCreateBootstrapToast(
-        (error.responseJSON && error.responseJSON.message) || error.responseText
-      );
+      console.error(error)
+      // bulkIoCreateBootstrapToast(
+      //   (error.responseJSON && error.responseJSON.message) || error.responseText
+      // );
     },
   });
 };

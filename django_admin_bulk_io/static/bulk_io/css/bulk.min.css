@@ -1,0 +1,132 @@
+/* Bulk IO Custom CSS */
+
+button.btn {
+  display: block;
+  float: left;
+  padding: 3px 12px;
+  border: 0px;
+  border-radius: 1rem;
+  letter-spacing: 0.5px;
+  text-transform: uppercase;
+  font-weight: 400;
+  font-size: 06875;
+  transition: all 0.25s;
+}
+
+button.btn-primary {
+  background-color: #007bff;
+  border-color: #007bff;
+  color: white;
+  cursor: pointer;
+}
+
+button.btn-primary:active {
+  -webkit-transform: scale(0.98);
+  transform: scale(0.98);
+}
+button.btn-primary:hover {
+  background-color: #0069d9;
+  border-color: #0062cc;
+}
+
+button.btn-secondary {
+  background-color: #6c757d;
+  border-color: #6c757d;
+  color: white;
+  cursor: pointer;
+}
+
+button.btn-secondary:active {
+  -webkit-transform: scale(0.98);
+  transform: scale(0.98);
+}
+button.btn-secondary:hover {
+  background-color: #5a6268;
+  border-color: #545b62;
+}
+
+/* Flex Property */
+.flex-container {
+  display: flex;
+  flex-wrap: wrap;
+  justify-content: center;
+  align-items: center;
+}
+
+.flex-item {
+  margin: 10px;
+  padding: 10px;
+  border: 1px solid #ccc;
+  border-radius: 5px;
+  text-align: center;
+}
+
+/* Modal CSS */
+
+.modal {
+  position: absolute;
+  z-index: 999;
+  width: 100%;
+  height: 100vh;
+  backdrop-filter: brightness(0.4);
+  font-size: 1rem;
+  display: none;
+}
+
+.modal-dialog {
+  max-width: 75%;
+  margin: 1.75rem auto;
+  border-radius: 1rem;
+  background-color: #f0f0f0;
+  color: #000;
+}
+
+.modal-content {
+  border-radius: 0.5rem;
+  box-shadow: 0 0.25rem 1rem rgba(0, 0, 0, 0.1);
+}
+
+.modal-header {
+  padding: 1rem;
+  border-bottom: 1px solid #dee2e6;
+}
+
+.modal-title {
+  margin-bottom: 0;
+}
+
+.btn-close {
+  margin-left: auto;
+  border: none;
+  background-color: transparent;
+  cursor: pointer;
+}
+
+.modal-body {
+  padding: 1rem;
+}
+
+.modal-footer {
+  padding: 1rem;
+  border-top: 1px solid #dee2e6;
+}
+
+/* Custom Admin Button CSS */
+
+.btn-admin-modal {
+  padding: 0.5rem 1rem 0.5rem 1rem;
+  border-radius: 0.5rem;
+  border: 0px;
+  text-transform: uppercase;
+  font-weight: 600;
+  -webkit-transition: all 0.25s;
+  transition: all 0.25s;
+  background-color: #007bff;
+  border-color: #007bff;
+  cursor: pointer;
+}
+
+.btn-admin-modal:active {
+  -webkit-transform: scale(0.98);
+  transform: scale(0.98);
+}

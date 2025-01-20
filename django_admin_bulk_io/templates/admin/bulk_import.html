@@ -4,8 +4,28 @@
 {% block title %}Bulk IO{%endblock%}
 
 {% block content %}
-<div class="border container">
+<div class="container">
     {{block.super}}
+    <div class="card mb-3">
+        <h3 class="card-header">Bulk IO Import</h3>
+        <div class="card-body">
+            <p class="card-text">
+                This page allows you to import your data in various formats. Please upload the
+                file below to initiate the import process. The import may take some time depending on the size of your
+                dataset.
+            </p>
+            <form method="post" enctype="multipart/form-data">
+                <div class="mb-3">
+                    <label class="form-label">Import File</label>
+                    <input class="form-control" type="file" name="file">
+                </div>
+                <div class="form-text">
+                    <small class="text-muted">Please upload files with following extensions, ie. json, csv.</small>
+                </div>
+                <button type="submit" class="btn btn-primary">Import</button>
+            </form>
+        </div>
+    </div>
     {% include 'django_admin_bulk_io/context_data_bulk_io.html' %}
 </div>
 {% endblock %}

@@ -27,10 +27,11 @@ DJANGO_APPS = [
     "django.contrib.staticfiles",
 ]
 
+# Project Apps
 PROJECT_APPS = ["bulk_io_test.apps.BulkIoTestConfig", "django_admin_bulk_io"]
 
 # Third Party Apps
-THIRD_PARTY_APPS = []
+THIRD_PARTY_APPS = ["django_extensions"]
 
 
 INSTALLED_APPS = THIRD_PARTY_APPS + PROJECT_APPS + DJANGO_APPS

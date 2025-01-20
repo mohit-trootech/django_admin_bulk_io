@@ -12,6 +12,8 @@ from django_admin_bulk_io.utils.utils import (
 )
 from django.contrib.messages import SUCCESS
 from django_admin_bulk_io.utils.constants import BulkIOMessages
+
+
 class BulkIOModelAdmin(ModelAdmin):
 
     def get_urls(self, *args, **kwargs):
@@ -22,10 +24,12 @@ class BulkIOModelAdmin(ModelAdmin):
         urls = super(BulkIOModelAdmin, self).get_urls(*args, **kwargs)
         bulk_io_urls = [
             path("bulk-import/", bulk_import_view, name="%s_%s_bulk_import" % info),
-            path("bulk-export/", bulk_export_view, name="%s_%s_bulk_export" % info)
+            path("bulk-export/", bulk_export_view, name="%s_%s_bulk_export" % info),
         ]
         return bulk_io_urls + urls
-    actions = ['bulk_export']
+
+    actions = ["bulk_export"]
+
     def bulk_export(self, request, queryset):
         """Export Queryset Action"""
 

@@ -5,14 +5,14 @@
     <li class="breadcrumb-item">
       <a class="text-decoration-none" 
         href="{% url 'admin:app_list' app_label=app_label%}"
-        >{{app_label}}</a
+        >{{app_label|title}}</a
       >
     </li>
     <li class="breadcrumb-item">
       <a class="text-decoration-none"
-        href="{% url opts|admin_urlname:'changelist' %}">{{model_name}}</a
+        href="{% url opts|admin_urlname:'changelist' %}">{{model_name|title}}</a
       >
     </li>
-    <li class="breadcrumb-item text-info" aria-current="page">{{action}}</li>
+    <li class="breadcrumb-item text-info" aria-current="page">{{action|title}}</li>
   </div>
 </nav>

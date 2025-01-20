@@ -36,7 +36,7 @@ def generate_csv_from_queryset(queryset) -> str:
     use pandas to generate csv from queryset
     """
     df = pd.DataFrame.from_records(queryset.values())
-    return df.to_csv()
+    return df.to_csv(index=False)
 
 
 def save_csv_file_in_base_dir(csv_str: str, app_label, model_name) -> None:
@@ -53,7 +53,20 @@ def save_csv_file_in_base_dir(csv_str: str, app_label, model_name) -> None:
         makedirs(file_path)
     except FileExistsError:
         pass
+
     def create_file():
         with open(file_path + filename, "w") as f:
             f.write(csv_str)
+
     create_file()
+
+
+def import_csv_file(model, csv_file, fields):
+    """Import CSV File"""
+    df = pd.read_csv(csv_file)
+    df = df[fields]
+    objs = []
+    for _, row in df.iterrows():
+        obj = model(**row.to_dict())
+        objs.append(obj)
+    return objs

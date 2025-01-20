@@ -1,7 +1,4 @@
 {%load render_model_fields bulk_io_urls_list %}
-<h1>Bulk IO</h1>
-<p>This page allows you to export data from the database.</p>
-<p>Please select the fields you want to export.</p>
 {% if form %}
 {% include 'django_admin_bulk_io/export_filters_form.html' with form=form %}
 {%endif%}
@@ -12,7 +9,7 @@
             <tr>
             <th><input type="checkbox" class="form-check-input" name="select-all"></th>
             {% for field in model_fields %}
-            <th scope="col">{{field.name|title}}</th>
+            <th scope="col">{{field|title}}</th>
             {% endfor %}
         </tr>
     </thead>
@@ -23,7 +20,7 @@
                 <input type="checkbox" class="form-check-input" name="instance" value="{{obj.id}}">
             </th>
             {% for field in model_fields %}
-            <td>{% render_model_fields obj field.name %}</td>
+            <td>{% render_model_fields obj field %}</td>
             {% endfor %}
         </tr>
         {% endfor %}

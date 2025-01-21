@@ -149,29 +149,20 @@ LOGGING = {
             "format": "{levelname} {asctime} {module} {process:d} {thread:d} {message}",
             "style": "{",
         },
-        "simple": {
-            "format": "{levelname} {message}",
-            "style": "{",
-        },
     },
     "handlers": {
         "file": {
-            "level": "INFO",
+            "level": "DEBUG",
             "class": "logging.FileHandler",
             "filename": "debug.log",
             "formatter": "verbose",
         },
         "console": {
-            "level": "INFO",
             "class": "logging.StreamHandler",
-            "formatter": "simple",
         },
     },
-    "loggers": {
-        "rewards": {
-            "handlers": ["file", "console"],
-            "level": "INFO",
-            "propagate": True,
-        },
+    "root": {
+        "handlers": ["console", "file"],
+        "level": "INFO",
     },
 }

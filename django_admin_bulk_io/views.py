@@ -1,7 +1,6 @@
 # Django Admin Bulk I/O Views
 from django.apps import apps
 from http import HTTPStatus
-from django.db.models import Q
 from django.db.models import Model
 from django.http import JsonResponse
 from django.db.models import QuerySet
@@ -12,16 +11,22 @@ from django_admin_bulk_io.utils.constants import (
     BulkIOException,
     BulkIOMessages,
     Keys,
+    LogMessages,
+    AcceptedTypes,
 )
 from django.views import View
 from django_admin_bulk_io.utils.utils import (
     get_admin_class_for_model_instance,
     generate_csv_from_queryset,
     import_csv_file,
+    generate_csv_filename,
 )
-from django.urls import reverse
-from django.shortcuts import redirect
-from django.contrib.messages import error, info
+from django.core.files.base import ContentFile
+from logging import Logger
+from django.conf import settings
+
+
+logger = Logger(__name__) if settings.LOGGING else None
 
 
 def get_model(app_label: str, model_name: str) -> Model:
@@ -31,35 +36,13 @@ def get_model(app_label: str, model_name: str) -> Model:
     return apps.get_model(app_label=app_label, model_name=model_name)
 
 
+BulkIOExport = get_model(app_label="django_admin_bulk_io", model_name="BulkIOExport")
+BulkIOImport = get_model(app_label="django_admin_bulk_io", model_name="BulkIOImport")
+
+
 @method_decorator(csrf_exempt, name="dispatch")
 class BulkIOBaseView(View):
     template_name = Templates.BASE_IO
-
-    # def get_queryset(self) -> QuerySet:
-    #     search_fields = self.admin_class.get_search_fields(self.request)
-    #     query = Q()
-    #     if search_fields:
-    #         search_term = self.request.GET.get("q")
-    #         if search_term:
-    #             for field in search_fields:
-    #                 query &= Q(**{field + "__icontains": search_term})
-    #     if self.request.GET:
-    #         form = DynamicExportForm(model=self.model, data=self.request.GET)
-    #         if form.is_valid():
-    #             for field in form.cleaned_data:
-    #                 if form.cleaned_data[field]:
-    #                     query &= Q(**{field + "__exact": form.cleaned_data[field]})
-    #     return self.model.objects.filter(query)
-
-    # def get_context_data(self, **kwargs) -> dict:
-    #     context = super().get_context_data(**kwargs)
-    #     context["opts"] = self.model._meta
-    #     context["model_name"] = self.model_name
-    #     context["app_label"] = self.app_label
-    #     context["action"] = self.action
-    #     context["model"] = self.model
-    #     context["model_fields"] = self.fields
-    #     return context
 
     def dispatch(self, request, *args, **kwargs):
         self.app_label, self.model_name, self.action = [
@@ -75,21 +58,36 @@ class BulkImportView(BulkIOBaseView):
     template_name = Templates.BULK_IMPORT_HTML
 
     def post(self, request, *args, **kwargs):
+        log_message = LogMessages.LOGGER_NOT_CONFIGURED
         try:
-            csv_file = request.FILES["file"]
-            if not csv_file:
-                raise BulkIOException.FILE_NOT_FOUND
-            self.model.objects.bulk_create(
-                import_csv_file(model=self.model, csv_file=csv_file, fields=self.fields)
+            if not request.FILES:
+                if logger:
+                    log_message = LogMessages.NO_FILES_TO_IMPORT
+                    logger.warning(log_message)
+                return JsonResponse(
+                    {"message": BulkIOException.FILE_NOT_FOUND},
+                    status=HTTPStatus.BAD_REQUEST,
+                )
+            file = request.FILES["file"]
+            if file.content_type not in AcceptedTypes.get_accepted_types_list():
+                if logger:
+                    log_message = LogMessages.FILE_TYPE_NOT_SUPPORTED
+                    logger.warning(log_message)
+                return JsonResponse(
+                    {"message": BulkIOException.FILE_TYPE_NOT_SUPPORTED},
+                    status=HTTPStatus.BAD_REQUEST,
+                )
+            objs = import_csv_file(model=self.model, csv_file=file, fields=self.fields)
+            return JsonResponse(
+                {"message": BulkIOMessages.CSV_IMPORTED_SUCCESSFULLY},
+                status=HTTPStatus.OK,
             )
-            info(request, BulkIOMessages.CSV_IMPORTED_SUCCESSFULLY)
-            return redirect(
-                reverse("admin:%s_%s_bulk_import" % (self.app_label, self.model_name))
-            )
-        except Exception as e:
-            error(request, str(e))
-            return redirect(
-                reverse("admin:%s_%s_bulk_import" % (self.app_label, self.model_name))
+        except Exception as err:
+            if logger:
+                log_message = str(err)
+                logger.error(log_message)
+            return JsonResponse(
+                {"message": log_message}, status=HTTPStatus.INTERNAL_SERVER_ERROR
             )
 
 
@@ -101,42 +99,44 @@ class BulkExportView(BulkIOBaseView):
     def get_queryset(self):
         return self.model.objects.all()
 
-    def get_query_params(self):
-        return dict(self.request.GET)
-
-    def get_search_fields(self):
-        return self.admin_class.get_search_fields(self.request)
-
-    def get_filtered_queryset(self, queryset, query_params):
-        search = query_params.pop("q")
-        query = Q()
-        search_fields = self.get_search_fields()
-        if search_fields and search:
-            for field in search_fields:
-                query &= Q(**{field + "__icontains": search})
-        if query_params:
-            for field in query_params:
-                query &= Q(**{field: query_params[field][0]})
-        return queryset.filter(query)
-
     def get_queryset_with_ids(self, queryset: QuerySet, ids: list) -> QuerySet:
         return queryset.filter(pk__in=ids)
 
     def post(self, request, *args, **kwargs):
-        if not request.POST.get(Keys.SELECTED_IDS):
-            return JsonResponse(
-                {"message": BulkIOException.REQUEST_BODY_EMPTY},
-                status=HTTPStatus.BAD_REQUEST,
+        log_message = LogMessages.LOGGER_NOT_CONFIGURED
+        try:
+            payload = request.POST.get(Keys.SELECTED_IDS)
+            if not payload:
+                if logger:
+                    log_message = LogMessages.REQUEST_PAYLOAD_EMPTY
+                    logger.warning(BulkIOException.REQUEST_BODY_EMPTY % log_message)
+                return JsonResponse(
+                    {"message": BulkIOException.REQUEST_BODY_EMPTY % log_message},
+                    status=HTTPStatus.BAD_REQUEST,
+                )
+            ids = payload.split(",")
+            filtered_queryset = self.get_queryset_with_ids(
+                queryset=self.get_queryset(), ids=ids
             )
-        ids = request.POST.get(Keys.SELECTED_IDS).split(",")
-        filtered_queryset = self.get_queryset_with_ids(
-            queryset=self.get_queryset(), ids=ids
-        )
-        csv_str = generate_csv_from_queryset(filtered_queryset)
-        return JsonResponse(
-            {"message": BulkIOMessages.CSV_CREATED_SUCCESSFULLY},
-            status=HTTPStatus.OK,
-        )
+            csv_str = generate_csv_from_queryset(filtered_queryset)
+            title = generate_csv_filename()
+            file = BulkIOExport.objects.create(
+                file=ContentFile(content=csv_str, name=title)
+            )
+            return JsonResponse(
+                {
+                    "message": BulkIOMessages.CSV_CREATED_SUCCESSFULLY,
+                    "file": {"url": file.url, "title": file.title},
+                },
+                status=HTTPStatus.OK,
+            )
+        except Exception as err:
+            if logger:
+                log_message = BulkIOException.UNKNOWN_EXCEPTION_OCCURED % str(err)
+                logger.error(log_message)
+            return JsonResponse(
+                {"message": log_message}, status=HTTPStatus.INTERNAL_SERVER_ERROR
+            )
 
 
 bulk_export_view = BulkExportView.as_view()

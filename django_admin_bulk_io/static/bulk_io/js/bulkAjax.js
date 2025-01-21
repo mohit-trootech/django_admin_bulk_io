@@ -14,12 +14,15 @@ const bulkIoAjaxRequest = (url, type, data, callback) => {
     url: url,
     type: type,
     data: data,
+    processData: false,
+    contentType: false,
     success: (responseData) => {
-      console.log(responseData)
-      callback && callback(responseData);
+      responseData && triggerToast("Success", responseData.message);
+      callback && callback(responseData)
     },
     error: (error) => {
       console.error(error)
+      triggerToast(error.statusText, error.responseJSON && error.responseJSON.message || error.responseText)
       // bulkIoCreateBootstrapToast(
       //   (error.responseJSON && error.responseJSON.message) || error.responseText
       // );

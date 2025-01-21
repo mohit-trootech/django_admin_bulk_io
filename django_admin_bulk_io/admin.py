@@ -1,6 +1,6 @@
 # Django Admin Bulk I/O Admin
 
-from django.contrib.admin import ModelAdmin
+from django.contrib.admin import ModelAdmin, site
 from django.urls import path
 from django_admin_bulk_io.views import (
     bulk_import_view,
@@ -12,6 +12,10 @@ from django_admin_bulk_io.utils.utils import (
 )
 from django.contrib.messages import SUCCESS
 from django_admin_bulk_io.utils.constants import BulkIOMessages
+from django_admin_bulk_io.models import BulkIOExport, BulkIOImport
+
+site.register(BulkIOExport)
+site.register(BulkIOImport)
 
 
 class BulkIOModelAdmin(ModelAdmin):

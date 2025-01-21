@@ -1,13 +1,10 @@
 /* Bulk IO Utils */
 /**Constants */
-
-// Bulk Export Form Submit
 const actionToggle = "#action-toggle"
 const selectedAction = "[name=_selected_action]"
-/*
-Handle Bulk Export Form Submit
- */
-const bulkExportFormSubmit = async (event, url) => {
+const bulkIOFile = "#bulk-io-fileinput"
+/* Handle Bulk Export Form Submit */
+const bulkIOExport = async (event, url) => {
   event.preventDefault();
   const selectAll = document.querySelector(actionToggle);
   const allActions = document.querySelectorAll(selectedAction)
@@ -23,25 +20,35 @@ const bulkExportFormSubmit = async (event, url) => {
           return item.value;
         })
         .join(",");
-      bulkIOPostRequest(url, { selectedIds });
+      const formData = new FormData();
+      formData.append("selectedIds", selectedIds);
+
+      bulkIOPostRequest(url, formData, bulkIOExportSuccess);
     }
-
-
   }
 };
 
-const bulkExportSubmit = (event, url) => {
+const bulkIOExportSuccess = (response) => {
+  const downloadLink = document.createElement('a');
+  downloadLink.href = response.file.url;
+  downloadLink.target = "_blank"
+  downloadLink.click();
+};
+
+const bulkIOImport = async (event, url) => {
   event.preventDefault();
-  bulkIOPostRequest(url, new FormData(event.target), bulkExportSubmitSuccess);
-};
+  const bulkIoFileInput = document.querySelector(bulkIOFile);
+  if (bulkIoFileInput.files.length) {
+    const files = bulkIoFileInput.files
+    const formData = new FormData();
+    formData.append("file", files[0]);
+    bulkIOPostRequest(url, formData, bulkIOImportSuccess);
+  }
+  else {
+    triggerToast("Warning", "Please Choose a File First")
+  }
 
-const bulkExportSubmitSuccess = (response) => {
-  bulkIoCreateBootstrapToast(response.message);
-};
-
-const bulkIoCreateBootstrapToast = (message) => {
-  const toastContainer = document.getElementById("bulkIOLiveToast");
-  const toast = new bootstrap.Toast(toastContainer);
-  toastContainer.querySelector(".toast-body").innerText = message;
-  toast.show();
-};
+}
+const bulkIOImportSuccess = (response) => {
+  console.log(response)
+}

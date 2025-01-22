@@ -18,12 +18,13 @@ from django.views import View
 from django_admin_bulk_io.utils.utils import (
     get_admin_class_for_model_instance,
     generate_csv_from_queryset,
-    import_csv_file,
+    get_data_from_csv_file,
     generate_csv_filename,
 )
 from django.core.files.base import ContentFile
 from logging import Logger
 from django.conf import settings
+from django_admin_bulk_io.serializer import BulkIODynamicSerializer
 
 
 logger = Logger(__name__) if settings.LOGGING else None
@@ -49,13 +50,18 @@ class BulkIOBaseView(View):
             path for path in self.request.path.split("/") if path not in ["", "admin"]
         ]
         self.model = get_model(app_label=self.app_label, model_name=self.model_name)
-        self.admin_class = get_admin_class_for_model_instance(instance=self.model)
+        self.admin_class = get_admin_class_for_model_instance(model_instance=self.model)
         self.fields = self.admin_class.get_fields(request=self.request)
         return super().dispatch(request, *args, **kwargs)
 
 
 class BulkImportView(BulkIOBaseView):
     template_name = Templates.BULK_IMPORT_HTML
+    serializer_class = BulkIODynamicSerializer
+
+    def get_serializer(self):
+        self.serializer_class.Meta.model = self.model
+        return self.serializer_class
 
     def post(self, request, *args, **kwargs):
         log_message = LogMessages.LOGGER_NOT_CONFIGURED
@@ -77,7 +83,13 @@ class BulkImportView(BulkIOBaseView):
                     {"message": BulkIOException.FILE_TYPE_NOT_SUPPORTED},
                     status=HTTPStatus.BAD_REQUEST,
                 )
-            objs = import_csv_file(model=self.model, csv_file=file, fields=self.fields)
+            data = get_data_from_csv_file(
+                model=self.model, csv_file=file, fields=self.fields
+            )
+            serializer_class = self.get_serializer()
+            serializer = serializer_class(data=data, many=True)
+            serializer.is_valid(raise_exception=True)
+            serializer.save()
             return JsonResponse(
                 {"message": BulkIOMessages.CSV_IMPORTED_SUCCESSFULLY},
                 status=HTTPStatus.OK,
@@ -118,7 +130,7 @@ class BulkExportView(BulkIOBaseView):
             filtered_queryset = self.get_queryset_with_ids(
                 queryset=self.get_queryset(), ids=ids
             )
-            csv_str = generate_csv_from_queryset(filtered_queryset)
+            csv_str = generate_csv_from_queryset(filtered_queryset, self.model)
             title = generate_csv_filename()
             file = BulkIOExport.objects.create(
                 file=ContentFile(content=csv_str, name=title)

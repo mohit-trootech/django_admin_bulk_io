@@ -1,15 +1,28 @@
-/* Bulk IO Ajax Request Ultility */
-
+/**
+ * function to handle the ajax request to get the data
+ * @param url backend url
+ * @param callback callback function
+ */
 const bulkIOGetRequest = (url, callback) => {
-  bulkIoAjaxRequest(url, "GET", null, callback)
-}
-
+  bulkIoAjaxRequest(url, "GET", null, callback);
+};
+/**
+ * function to handle the ajax request to send the data
+ * @param url backend url
+ * @param data data to send to backend
+ * @param callback callback function
+ */
 const bulkIOPostRequest = (url, data, callback) => {
   bulkIoAjaxRequest(url, "POST", data, callback);
 };
-
+/**
+ * function to handle the ajax request to send the data
+ * @param url backend url
+ * @param type request type
+ * @param data data to send to backend
+ * @param callback callback function
+ */
 const bulkIoAjaxRequest = (url, type, data, callback) => {
-  // Send Ajax Request to Send FormData
   $.ajax({
     url: url,
     type: type,
@@ -18,14 +31,14 @@ const bulkIoAjaxRequest = (url, type, data, callback) => {
     contentType: false,
     success: (responseData) => {
       responseData && triggerToast("Success", responseData.message);
-      callback && callback(responseData)
+      callback && callback(responseData);
     },
     error: (error) => {
-      console.error(error)
-      triggerToast(error.statusText, error.responseJSON && error.responseJSON.message || error.responseText)
-      // bulkIoCreateBootstrapToast(
-      //   (error.responseJSON && error.responseJSON.message) || error.responseText
-      // );
+      console.error(error);
+      triggerToast(
+        error.statusText,
+        (error.responseJSON && error.responseJSON.message) || error.responseText
+      );
     },
   });
 };

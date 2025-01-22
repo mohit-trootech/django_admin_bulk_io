@@ -4,56 +4,64 @@ from django.conf import settings
 from django.contrib import admin
 from django.utils.timezone import now
 from django_admin_bulk_io.utils.constants import FILE_NAME_TEMPLATE
-from django_admin_bulk_io.serializer import BulkIODynamicSerializer
-from django.db.models import Model
+from django.db.models import Model, QuerySet
 
 
-def get_dynamic_serializer(my_model: Model):
-
-    class DynamicModelSerializer(BulkIODynamicSerializer):
-
-        class Meta(BulkIODynamicSerializer.Meta):
-            model = my_model
-
-    return DynamicModelSerializer
-
-
-def get_admin_class_for_model_instance(instance):
+def get_model_fields_info(model: Model) -> tuple[list[str], list[str]]:
     """
-    Retrieves the ModelAdmin class associated with a model instance.
+    This method returns required fields for given model.
+    :param model: model instance
+    :return: tuple of required and optional fields list
+    """
+    required = []
+    optional = []
+    for field in model._meta.fields:
+        if field.blank is False and field.null is False:
+            required.append(field.name)
+        else:
+            optional.append(field.name)
+    return required, optional
 
-    Args:
-        instance: An instance of a Django model.
 
-    Returns:
-        The ModelAdmin class associated with the model, or None if not found.
+def get_admin_class_for_model_instance(model_instance: Model) -> admin.ModelAdmin:
+    """
+    Retrieves the ModelAdmin class associated with a model.
+    :param: model_instance: An model_instance of a Django model.
+    :return: The ModelAdmin class associated with the model, or None if not found.
     """
     for model, admin_class in admin.site._registry.items():
-        if model == instance:
+        if model == model_instance:
             return admin_class
     return None
 
 
 def generate_csv_filename() -> str:
     """
-    generate csv filename
+    generate csv filename with timestamp
     :return: str
     """
 
     return f"bulk_io_{now().strftime('%Y-%m-%d-%H-%M-%S')}.csv"
 
 
-def generate_csv_from_queryset(queryset) -> str:
+def generate_csv_from_queryset(queryset: QuerySet, model: Model) -> str:
     """
     use pandas to generate csv from queryset
+    :param queryset: QuerySet
+    :param model: Model
+    :return: str
     """
     df = pd.DataFrame.from_records(queryset.values())
     return df.to_csv(index=False)
 
 
-def save_csv_file_in_base_dir(csv_str: str, app_label, model_name) -> None:
+def save_csv_file_in_base_dir(csv_str: str, app_label: str, model_name: str) -> None:
     """
     save csv string in base dir handle exceptions
+    :param csv_str: str
+    :param app_label: str
+    :param model_name: str
+    :return: None
     """
     filename = generate_csv_filename()
     file_path = FILE_NAME_TEMPLATE.format(
@@ -72,23 +80,26 @@ def save_csv_file_in_base_dir(csv_str: str, app_label, model_name) -> None:
             f.write(csv_str)
 
     create_file()
-    return full_path, filename
 
 
-def import_csv_file(model, csv_file, fields):
-    """Import CSV File"""
-    try:
-        df = pd.read_csv(csv_file)
-        nan_fields = df.columns[df.isna().any()].tolist()
-        print(nan_fields)
-        df.drop(columns=list(nan_fields), inplace=True)
-        if "id" in df.columns:
-            df.drop(columns=["id"], inplace=True)
-        serializer_class = get_dynamic_serializer(my_model=model)
-        serializer = serializer_class(data=df.to_dict(orient="records"), many=True)
-        if serializer.is_valid():
-            return serializer.save()
-        else:
-            raise Exception(serializer.errors)
-    except Exception as e:
-        raise e
+def get_data_from_csv_file(model: Model, csv_file: str, fields: list) -> dict:
+    """
+    import & clean csv file data and returns dict of data
+    :param model: Model
+    :param csv_file: str
+    :param fields: list
+    :return: dict
+    """
+
+    df = pd.read_csv(csv_file)
+    if model._meta.pk.name in df.columns:
+        df.drop(columns=[model._meta.pk.name], inplace=True)
+    required, optional = get_model_fields_info(model=model)
+    for field in required:
+        if field in df.columns:
+            df.dropna(subset=[field], inplace=True)
+    for field in optional:
+        if field in df.columns:
+            if df[field].isna().any():
+                df.drop(columns=[field], inplace=True)
+    return df.to_dict(orient="records")

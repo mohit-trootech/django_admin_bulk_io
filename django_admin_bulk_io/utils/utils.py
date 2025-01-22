@@ -5,6 +5,18 @@ from django.contrib import admin
 from django.utils.timezone import now
 from django_admin_bulk_io.utils.constants import FILE_NAME_TEMPLATE
 from django.db.models import Model, QuerySet
+from logging import Logger
+
+logger = Logger(__name__) if settings.LOGGING else None
+
+
+def log_errors(errors: list) -> None:
+    """
+    This method logs the errors.
+    :param errors: list of errors
+    """
+    for error in errors:
+        logger.error(error)
 
 
 def get_model_fields_info(model: Model) -> tuple[list[str], list[str]]:
@@ -17,9 +29,9 @@ def get_model_fields_info(model: Model) -> tuple[list[str], list[str]]:
     optional = []
     for field in model._meta.fields:
         if field.blank is False and field.null is False:
-            required.append(field.name)
+            required.append(field)
         else:
-            optional.append(field.name)
+            optional.append(field)
     return required, optional
 
 
@@ -92,14 +104,15 @@ def get_data_from_csv_file(model: Model, csv_file: str, fields: list) -> dict:
     """
 
     df = pd.read_csv(csv_file)
+    df.drop_duplicates(inplace=True)
     if model._meta.pk.name in df.columns:
         df.drop(columns=[model._meta.pk.name], inplace=True)
     required, optional = get_model_fields_info(model=model)
     for field in required:
-        if field in df.columns:
-            df.dropna(subset=[field], inplace=True)
+        if field.name in df.columns:
+            df.dropna(subset=[field.name], inplace=True)
     for field in optional:
-        if field in df.columns:
-            if df[field].isna().any():
-                df.drop(columns=[field], inplace=True)
+        if field.name in df.columns:
+            if df[field.name].isna().any():
+                df.drop(columns=[field.name], inplace=True)
     return df.to_dict(orient="records")

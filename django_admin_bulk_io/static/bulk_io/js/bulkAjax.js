@@ -36,7 +36,7 @@ const bulkIoAjaxRequest = (url, type, data, callback) => {
     error: (error) => {
       console.error(error);
       triggerToast(
-        error.statusText,
+        "Error",
         (error.responseJSON && error.responseJSON.message) || error.responseText
       );
     },

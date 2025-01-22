@@ -20,12 +20,13 @@ from django_admin_bulk_io.utils.utils import (
     generate_csv_from_queryset,
     get_data_from_csv_file,
     generate_csv_filename,
+    log_errors,
 )
 from django.core.files.base import ContentFile
 from logging import Logger
 from django.conf import settings
 from django_admin_bulk_io.serializer import BulkIODynamicSerializer
-
+from django_admin_bulk_io.utils.bulkio_threading import MultiProcessPool
 
 logger = Logger(__name__) if settings.LOGGING else None
 
@@ -86,10 +87,13 @@ class BulkImportView(BulkIOBaseView):
             data = get_data_from_csv_file(
                 model=self.model, csv_file=file, fields=self.fields
             )
-            serializer_class = self.get_serializer()
-            serializer = serializer_class(data=data, many=True)
-            serializer.is_valid(raise_exception=True)
-            serializer.save()
+            errors = MultiProcessPool(
+                serializer=self.get_serializer(), data=data
+            ).multiprocess_pool()
+            if errors:
+                if logger:
+                    log_errors(errors)
+            BulkIOImport.objects.create(file=file)
             return JsonResponse(
                 {"message": BulkIOMessages.CSV_IMPORTED_SUCCESSFULLY},
                 status=HTTPStatus.OK,

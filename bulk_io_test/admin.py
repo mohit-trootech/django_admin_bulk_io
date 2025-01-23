@@ -9,7 +9,7 @@ Like = get_model(app_label="bulk_io_test", model_name="Like")
 
 @register(Comment)
 class CommentAdmin(BulkIOModelAdmin):
-    list_display = ("title", "created", "status")
+    list_display = ("id", "title", "created", "status")
     list_filter = ("created", "status")
     search_fields = ("title",)
     fieldsets = (
@@ -18,9 +18,11 @@ class CommentAdmin(BulkIOModelAdmin):
 
 
 @register(Post)
-class PostAdmin(ModelAdmin):
+class PostAdmin(BulkIOModelAdmin):
     list_display = ("title",)
     search_fields = ("title",)
+    fieldsets = (("General", {"fields": ("title", "description", "comment", "likes")}),)
+    filter_horizontal = ("likes",)
 
 
 site.register(Like)

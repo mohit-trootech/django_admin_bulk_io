@@ -107,10 +107,16 @@ def get_data_from_csv_file(model: Model, csv_file: str, fields: list) -> dict:
         df.drop(columns=[model._meta.pk.name], inplace=True)
     required, optional = get_model_fields_info(model=model)
     for field in required:
+        if field.is_relation:
+            field_model = field.related_model
+            df[field.attname] = df[field.attname].apply(
+                lambda x: field_model.objects.filter(pk=x).values()[0]
+            )
         if field.name in df.columns:
             df.dropna(subset=[field.name], inplace=True)
     for field in optional:
         if field.name in df.columns:
             if df[field.name].isna().any():
                 df.drop(columns=[field.name], inplace=True)
+    breakpoint()
     return df.to_dict(orient="records")

@@ -7,16 +7,14 @@ from django_admin_bulk_io.utils.constants import FILE_NAME_TEMPLATE
 from django.db.models import Model, QuerySet
 from logging import Logger
 
-logger = Logger(__name__) if settings.LOGGING else None
 
-
-def log_errors(errors: list) -> None:
+def log_messages(errors: list, logger: Logger) -> None:
     """
     This method logs the errors.
     :param errors: list of errors
     """
     for error in errors:
-        logger.error(error)
+        logger(error)
 
 
 def get_model_fields_info(model: Model) -> tuple[list[str], list[str]]:
@@ -56,7 +54,7 @@ def generate_csv_filename() -> str:
     return f"bulk_io_{now().strftime('%Y-%m-%d-%H-%M-%S')}.csv"
 
 
-def generate_csv_from_queryset(queryset: QuerySet, model: Model) -> str:
+def generate_csv_from_queryset(queryset: QuerySet) -> str:
     """
     use pandas to generate csv from queryset
     :param queryset: QuerySet

@@ -1,7 +1,7 @@
 /**
  * Utility functions for bulk actions
  */
-const actionToggle = "#action-toggle";
+const selectAcrossInput = "[name='select_across']";
 const selectedAction = "[name=_selected_action]";
 const bulkIOFile = "#bulk-io-fileinput";
 const BulkIOAdminModal = "#bulkIoAdminModal";
@@ -13,24 +13,25 @@ const BulkIOAdminModal = "#bulkIoAdminModal";
  */
 const bulkIOExport = async (event, url) => {
   event.preventDefault();
-  const selectAll = document.querySelector(actionToggle);
+  const selectAcross = parseInt(
+    document.querySelector(selectAcrossInput).value
+  );
   const allActions = document.querySelectorAll(selectedAction);
-
   /**Check if allActions Available */
   if (allActions) {
     const selectedActions = [...allActions].filter((item) => {
       return item.checked && item;
     });
-    if (selectedActions) {
-      const selectedIds = [...selectedActions]
-        .map((item) => {
-          return item.value;
-        })
-        .join(",");
+    if (selectedActions.length) {
+      const selectedIds = [...selectedActions].map((item) => {
+        return item.value;
+      });
       const formData = new FormData();
-      formData.append("selectedIds", selectedIds);
-
+      formData.append("_selected_action", selectedIds);
+      selectAcross && formData.append("select_across", selectAcross);
       bulkIOPostRequest(url, formData, bulkIOExportSuccess);
+    } else {
+      triggerToast("Warning", "Please Select Some Rows First");
     }
   }
 };

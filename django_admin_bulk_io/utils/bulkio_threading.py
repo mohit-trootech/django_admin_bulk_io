@@ -7,14 +7,13 @@ from typing import Any
 class MultiProcessPool:
     data: dict
     serializer: Any
-    error_queue = None
 
     def validate_serialization(self, item):
-        self.serializer = self.serializer(data=item)
-        if self.serializer.is_valid():
-            self.serializer.save()
+        serializer = self.serializer(data=item)
+        if serializer.is_valid():
+            serializer.save()
         else:
-            self.error_queue.put(self.serializer.errors)
+            self.error_queue.put(serializer.errors)
 
     def multiprocess_pool(self):
 

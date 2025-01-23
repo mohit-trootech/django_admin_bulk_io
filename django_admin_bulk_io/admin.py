@@ -38,7 +38,9 @@ class BulkIOModelAdmin(ModelAdmin):
         """Export Queryset Action"""
 
         csv_str = generate_csv_from_queryset(queryset)
-        save_csv_file_in_base_dir(csv_str, self.opts.app_label, self.model.__name__)
+        save_csv_file_in_base_dir(
+            csv_str, self.opts.app_label, self.model.__name__.lower()
+        )
         self.message_user(request, BulkIOMessages.CSV_CREATED_SUCCESSFULLY, SUCCESS)
 
     bulk_export.short_description = "Export Selected"

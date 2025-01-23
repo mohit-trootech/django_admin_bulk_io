@@ -146,13 +146,13 @@ LOGGING = {
     "disable_existing_loggers": False,
     "formatters": {
         "verbose": {
-            "format": "{levelname} {module} {message}",
+            "format": "{levelname} - {asctime} - {name} - {message}",
             "style": "{",
         },
     },
     "handlers": {
         "file": {
-            "level": "DEBUG",
+            "level": "INFO",
             "class": "logging.FileHandler",
             "filename": "debug.log",
             "formatter": "verbose",
@@ -166,3 +166,4 @@ LOGGING = {
         "level": "INFO",
     },
 }
+DATA_UPLOAD_MAX_NUMBER_FIELDS = 999999

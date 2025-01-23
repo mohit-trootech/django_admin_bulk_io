@@ -12,15 +12,15 @@ class AcceptedTypes:
 
     @classmethod
     def get_accepted_types_list(cls) -> list:
-        return [cls.CSV, cls.JSON]
+        return [cls.CSV]
 
 
 class Keys:
     """Bulk IO - Request Keys"""
 
     ACTION_TOGGLE = "action-toggle"
-    SELECTED_ACTIONS = "_selected_actions"
-    SELECTED_IDS = "selectedIds"
+    SELECTED_ACTION = "_selected_action"
+    SELECT_ALL = "select_across"
 
 
 class Templates:
@@ -107,23 +107,27 @@ class BulkIOMessages:
     """Bulk IO - Success Messages"""
 
     CSV_CREATED_SUCCESSFULLY = "CSV Generated Successfully,"
-    CSV_IMPORTED_SUCCESSFULLY = "CSV Imported Successfully."
+    CSV_IMPORTED_SUCCESSFULLY = "%s New records created."
+    CSV_IMPORTED_WITH_EXCEPTIONS = "%s New records created with exceptions. %s"
 
 
 class BulkIOException:
     """Bulk IO - Exceptions"""
 
     ERROR_URL_REVERSE = "Error reversing URL: {ve}."
-    REQUEST_BODY_EMPTY = "Request body is empty, %s"
+    REQUEST_BODY_EMPTY = "Request body is empty."
     FILE_NOT_FOUND = "File not found."
-    UNKNOWN_EXCEPTION_OCCURED = "Error, %s"
+    UNKNOWN_EXCEPTION_OCCURED = "Error, Please view log file for details."
     FILE_TYPE_NOT_SUPPORTED = "File type not supported."
+    INVALID_CSV_FILE = "Invalid CSV file."
 
 
 class LogMessages:
     """Bulk IO - Log Messages"""
 
+    VIEW_LOG_FOR_DETAILS = "Please view log file for details."
     LOGGER_NOT_CONFIGURED = "Please configure logger for more details."
     REQUEST_PAYLOAD_EMPTY = "No data to export."
     NO_FILES_TO_IMPORT = "No files to import."
     FILE_TYPE_NOT_SUPPORTED = "File type not supported."
+    UNKNOWN_EXCEPTION_OCCURED = "Error, %s"

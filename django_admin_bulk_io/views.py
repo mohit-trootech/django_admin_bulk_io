@@ -20,15 +20,16 @@ from django_admin_bulk_io.utils.utils import (
     generate_csv_from_queryset,
     get_data_from_csv_file,
     generate_csv_filename,
-    log_errors,
+    log_messages,
 )
 from django.core.files.base import ContentFile
-from logging import Logger
-from django.conf import settings
+from logging import getLogger
 from django_admin_bulk_io.serializer import BulkIODynamicSerializer
 from django_admin_bulk_io.utils.bulkio_threading import MultiProcessPool
+from ast import literal_eval
+from django_admin_bulk_io.utils.response import JsonResponseRenderer
 
-logger = Logger(__name__) if settings.LOGGING else None
+logger = getLogger(__name__)
 
 
 def get_model(app_label: str, model_name: str) -> Model:
@@ -45,6 +46,7 @@ BulkIOImport = get_model(app_label="django_admin_bulk_io", model_name="BulkIOImp
 @method_decorator(csrf_exempt, name="dispatch")
 class BulkIOBaseView(View):
     template_name = Templates.BASE_IO
+    renderer = JsonResponseRenderer
 
     def dispatch(self, request, *args, **kwargs):
         self.app_label, self.model_name, self.action = [
@@ -65,45 +67,57 @@ class BulkImportView(BulkIOBaseView):
         return self.serializer_class
 
     def post(self, request, *args, **kwargs):
-        log_message = LogMessages.LOGGER_NOT_CONFIGURED
         try:
             if not request.FILES:
-                if logger:
-                    log_message = LogMessages.NO_FILES_TO_IMPORT
-                    logger.warning(log_message)
-                return JsonResponse(
-                    {"message": BulkIOException.FILE_NOT_FOUND},
-                    status=HTTPStatus.BAD_REQUEST,
+                log_messages(
+                    errors=[LogMessages.NO_FILES_TO_IMPORT], logger=logger.warning
+                )
+                return self.renderer.render_bad_request(
+                    data={"message": BulkIOException.FILE_NOT_FOUND}
                 )
             file = request.FILES["file"]
             if file.content_type not in AcceptedTypes.get_accepted_types_list():
-                if logger:
-                    log_message = LogMessages.FILE_TYPE_NOT_SUPPORTED
-                    logger.warning(log_message)
-                return JsonResponse(
-                    {"message": BulkIOException.FILE_TYPE_NOT_SUPPORTED},
-                    status=HTTPStatus.BAD_REQUEST,
+                log_messages(
+                    errors=[LogMessages.FILE_TYPE_NOT_SUPPORTED], logger=logger.warning
+                )
+                return self.renderer.render_bad_request(
+                    data={"message": BulkIOException.FILE_TYPE_NOT_SUPPORTED}
                 )
             data = get_data_from_csv_file(
                 model=self.model, csv_file=file, fields=self.fields
             )
+            if not data:
+                return self.renderer.render_bad_request(
+                    data={"message": BulkIOException.INVALID_CSV_FILE}
+                )
             errors = MultiProcessPool(
                 serializer=self.get_serializer(), data=data
             ).multiprocess_pool()
-            if errors:
-                if logger:
-                    log_errors(errors)
             BulkIOImport.objects.create(file=file)
-            return JsonResponse(
-                {"message": BulkIOMessages.CSV_IMPORTED_SUCCESSFULLY},
-                status=HTTPStatus.OK,
+            if errors:
+                log_message = LogMessages.LOGGER_NOT_CONFIGURED
+                if logger:
+                    log_message = LogMessages.VIEW_LOG_FOR_DETAILS
+                    log_messages(errors=errors, logger=logger.warning)
+                return self.renderer.render_ok(
+                    data={
+                        "message": BulkIOMessages.CSV_IMPORTED_WITH_EXCEPTIONS
+                        % (len(data) - len(errors), log_message)
+                    },
+                )
+            return self.renderer.render_ok(
+                data={
+                    "message": BulkIOMessages.CSV_IMPORTED_SUCCESSFULLY
+                    % (len(data) - len(errors))
+                }
             )
         except Exception as err:
-            if logger:
-                log_message = str(err)
-                logger.error(log_message)
-            return JsonResponse(
-                {"message": log_message}, status=HTTPStatus.INTERNAL_SERVER_ERROR
+            log_messages(
+                errors=[LogMessages.UNKNOWN_EXCEPTION_OCCURED % str(err)],
+                logger=logger.error,
+            )
+            return self.renderer.render_internal_server_error(
+                data={"message": BulkIOException.UNKNOWN_EXCEPTION_OCCURED},
             )
 
 
@@ -119,39 +133,33 @@ class BulkExportView(BulkIOBaseView):
         return queryset.filter(pk__in=ids)
 
     def post(self, request, *args, **kwargs):
-        log_message = LogMessages.LOGGER_NOT_CONFIGURED
         try:
-            payload = request.POST.get(Keys.SELECTED_IDS)
-            if not payload:
-                if logger:
-                    log_message = LogMessages.REQUEST_PAYLOAD_EMPTY
-                    logger.warning(BulkIOException.REQUEST_BODY_EMPTY % log_message)
-                return JsonResponse(
-                    {"message": BulkIOException.REQUEST_BODY_EMPTY % log_message},
-                    status=HTTPStatus.BAD_REQUEST,
-                )
-            ids = payload.split(",")
-            filtered_queryset = self.get_queryset_with_ids(
-                queryset=self.get_queryset(), ids=ids
-            )
-            csv_str = generate_csv_from_queryset(filtered_queryset, self.model)
+            queryset = self.get_queryset()
+            if Keys.SELECT_ALL not in request.POST:
+                payload = request.POST.get(Keys.SELECTED_ACTION).split(",")
+                if not payload:
+                    return self.renderer.render_bad_request(
+                        data={"message": BulkIOException.REQUEST_BODY_EMPTY},
+                    )
+                queryset = self.get_queryset_with_ids(queryset=queryset, ids=payload)
+            csv_str = generate_csv_from_queryset(queryset=queryset)
             title = generate_csv_filename()
             file = BulkIOExport.objects.create(
                 file=ContentFile(content=csv_str, name=title)
             )
-            return JsonResponse(
-                {
+            return self.renderer.render_ok(
+                data={
                     "message": BulkIOMessages.CSV_CREATED_SUCCESSFULLY,
                     "file": {"url": file.url, "title": file.title},
                 },
-                status=HTTPStatus.OK,
             )
         except Exception as err:
-            if logger:
-                log_message = BulkIOException.UNKNOWN_EXCEPTION_OCCURED % str(err)
-                logger.error(log_message)
-            return JsonResponse(
-                {"message": log_message}, status=HTTPStatus.INTERNAL_SERVER_ERROR
+            log_messages(
+                errors=[LogMessages.UNKNOWN_EXCEPTION_OCCURED % str(err)],
+                logger=logger.error,
+            )
+            return self.renderer.render_internal_server_error(
+                data={"message": BulkIOException.UNKNOWN_EXCEPTION_OCCURED},
             )
 
 

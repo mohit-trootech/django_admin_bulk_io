@@ -4,8 +4,9 @@ from django.conf import settings
 from django.contrib import admin
 from django.utils.timezone import now
 from django_admin_bulk_io.utils.constants import FILE_NAME_TEMPLATE
-from django.db.models import Model, QuerySet
+from django.db.models import Model
 from logging import Logger
+from ast import literal_eval
 
 
 def log_messages(errors: list, logger: Logger) -> None:
@@ -19,7 +20,7 @@ def log_messages(errors: list, logger: Logger) -> None:
 
 def get_model_fields_info(model: Model) -> tuple[list[str], list[str]]:
     """
-    This method returns required fields for given model.
+    This method returns required & optional fields for given model.
     :param model: model instance
     :return: tuple of required and optional fields list
     """
@@ -30,6 +31,12 @@ def get_model_fields_info(model: Model) -> tuple[list[str], list[str]]:
             required.append(field)
         else:
             optional.append(field)
+    if model._meta.many_to_many:
+        for field in model._meta.many_to_many:
+            if field.blank is False and field.null is False:
+                required.append(field)
+            else:
+                optional.append(field)
     return required, optional
 
 
@@ -54,14 +61,13 @@ def generate_csv_filename() -> str:
     return f"bulk_io_{now().strftime('%Y-%m-%d-%H-%M-%S')}.csv"
 
 
-def generate_csv_from_queryset(queryset: QuerySet) -> str:
+def generate_csv_from_serialized_data(data: dict) -> str:
     """
     use pandas to generate csv from queryset
-    :param queryset: QuerySet
-    :param model: Model
+    :param data: dict
     :return: str
     """
-    df = pd.DataFrame.from_records(queryset.values())
+    df = pd.DataFrame.from_records(data=data)
     return df.to_csv(index=False)
 
 
@@ -107,16 +113,12 @@ def get_data_from_csv_file(model: Model, csv_file: str, fields: list) -> dict:
         df.drop(columns=[model._meta.pk.name], inplace=True)
     required, optional = get_model_fields_info(model=model)
     for field in required:
-        if field.is_relation:
-            field_model = field.related_model
-            df[field.attname] = df[field.attname].apply(
-                lambda x: field_model.objects.filter(pk=x).values()[0]
-            )
         if field.name in df.columns:
+            if field.many_to_many:
+                df[field.name] = df[field.name].apply(lambda x: literal_eval(x))
             df.dropna(subset=[field.name], inplace=True)
     for field in optional:
         if field.name in df.columns:
             if df[field.name].isna().any():
                 df.drop(columns=[field.name], inplace=True)
-    breakpoint()
     return df.to_dict(orient="records")

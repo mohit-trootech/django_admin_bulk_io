@@ -7,6 +7,7 @@ from typing import Any
 class MultiProcessPool:
     data: dict
     serializer: Any
+    error_queue = None
 
     def validate_serialization(self, item):
         serializer = self.serializer(data=item)

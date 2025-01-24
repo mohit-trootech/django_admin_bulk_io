@@ -1,8 +1,5 @@
-# Django Admin Bulk I/O Views
 from django.apps import apps
-from http import HTTPStatus
 from django.db.models import Model
-from django.http import JsonResponse
 from django.db.models import QuerySet
 from django.views.decorators.csrf import csrf_exempt
 from django.utils.decorators import method_decorator
@@ -17,7 +14,7 @@ from django_admin_bulk_io.utils.constants import (
 from django.views import View
 from django_admin_bulk_io.utils.utils import (
     get_admin_class_for_model_instance,
-    generate_csv_from_queryset,
+    generate_csv_from_serialized_data,
     get_data_from_csv_file,
     generate_csv_filename,
     log_messages,
@@ -26,7 +23,6 @@ from django.core.files.base import ContentFile
 from logging import getLogger
 from django_admin_bulk_io.serializer import BulkIODynamicSerializer
 from django_admin_bulk_io.utils.bulkio_threading import MultiProcessPool
-from ast import literal_eval
 from django_admin_bulk_io.utils.response import JsonResponseRenderer
 
 logger = getLogger(__name__)
@@ -47,6 +43,11 @@ BulkIOImport = get_model(app_label="django_admin_bulk_io", model_name="BulkIOImp
 class BulkIOBaseView(View):
     template_name = Templates.BASE_IO
     renderer = JsonResponseRenderer
+    serializer_class = BulkIODynamicSerializer
+
+    def get_serializer(self):
+        self.serializer_class.Meta.model = self.model
+        return self.serializer_class
 
     def dispatch(self, request, *args, **kwargs):
         self.app_label, self.model_name, self.action = [
@@ -60,11 +61,6 @@ class BulkIOBaseView(View):
 
 class BulkImportView(BulkIOBaseView):
     template_name = Templates.BULK_IMPORT_HTML
-    serializer_class = BulkIODynamicSerializer
-
-    def get_serializer(self):
-        self.serializer_class.Meta.model = self.model
-        return self.serializer_class
 
     def post(self, request, *args, **kwargs):
         try:
@@ -90,27 +86,30 @@ class BulkImportView(BulkIOBaseView):
                 return self.renderer.render_bad_request(
                     data={"message": BulkIOException.INVALID_CSV_FILE}
                 )
-            errors = MultiProcessPool(
-                serializer=self.get_serializer(), data=data
-            ).multiprocess_pool()
+            data.append({})
+            serializer = self.get_serializer()
+            errors = []
+            for item in data:
+                s = serializer(data=item)
+                if s.is_valid():
+                    s.save()
+                    logger.info(f"Successfully saved the instance {s.data}")
+                else:
+                    errors.append(s.errors)
             BulkIOImport.objects.create(file=file)
+            message = BulkIOMessages.CSV_IMPORTED_SUCCESSFULLY % (
+                len(data) - len(errors),
+            )
             if errors:
                 log_message = LogMessages.LOGGER_NOT_CONFIGURED
                 if logger:
                     log_message = LogMessages.VIEW_LOG_FOR_DETAILS
                     log_messages(errors=errors, logger=logger.warning)
-                return self.renderer.render_ok(
-                    data={
-                        "message": BulkIOMessages.CSV_IMPORTED_WITH_EXCEPTIONS
-                        % (len(data) - len(errors), log_message)
-                    },
+                message = BulkIOMessages.CSV_IMPORTED_WITH_EXCEPTIONS % (
+                    len(data) - len(errors),
+                    log_message,
                 )
-            return self.renderer.render_ok(
-                data={
-                    "message": BulkIOMessages.CSV_IMPORTED_SUCCESSFULLY
-                    % (len(data) - len(errors))
-                }
-            )
+            return self.renderer.render_ok(data={"message": message})
         except Exception as err:
             log_messages(
                 errors=[LogMessages.UNKNOWN_EXCEPTION_OCCURED % str(err)],
@@ -142,7 +141,8 @@ class BulkExportView(BulkIOBaseView):
                         data={"message": BulkIOException.REQUEST_BODY_EMPTY},
                     )
                 queryset = self.get_queryset_with_ids(queryset=queryset, ids=payload)
-            csv_str = generate_csv_from_queryset(queryset=queryset)
+            data = self.get_serializer()(queryset, many=True).data
+            csv_str = generate_csv_from_serialized_data(data=data)
             title = generate_csv_filename()
             file = BulkIOExport.objects.create(
                 file=ContentFile(content=csv_str, name=title)

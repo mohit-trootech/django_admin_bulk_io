@@ -1,26 +1,55 @@
 from django.test import TestCase
-from rest_framework.test import APIClient
-from bulk_io_test.tests.factory import CommentFactory, PostFactory, UserFactory
 from utils.utils import get_model
+from django.contrib.auth import get_user_model
+from bulk_io_test.tests.factory import CommentFactory, PostFactory, UserFactory
 
 Comment = get_model(app_label="bulk_io_test", model_name="Comment")
 Post = get_model(app_label="bulk_io_test", model_name="Post")
+User = get_user_model()
 
 
-class TestModels(TestCase):
+class BaseTestModal(TestCase):
+    model = None
+
+    def validate_model(self, qs: list):
+        self.assertTrue(isinstance(qs, self.model))
+
+    def validate_many_to_many(self, qs: list, count: int):
+        self.assertEqual(qs.count(), count)
+
+
+class TestCommentModal(BaseTestModal):
+
+    def setUp(self):
+        super().setUp()
+        self.model = Comment
+
     def test_comment_model(self):
-        comment = CommentFactory()
-        self.assertTrue(isinstance(comment, Comment))
+        super(TestCommentModal, self).validate_model(qs=CommentFactory())
 
-    def test_post_model(self):
-        post = PostFactory()
-        self.assertTrue(isinstance(post, Post))
+
+class TestUserModal(BaseTestModal):
+
+    def setUp(self):
+        super().setUp()
+        self.model = User
 
     def test_user_model(self):
-        user = UserFactory()
-        self.assertTrue(isinstance(user, object))
+        super(TestUserModal, self).validate_model(qs=UserFactory())
+
+
+class TestPostModal(BaseTestModal):
+
+    def setUp(self):
+        super().setUp()
+        self.model = Post
+
+    def test_post_model(self):
+        super(TestPostModal, self).validate_model(qs=PostFactory())
 
     def test_post_likes_user_m2m(self):
         likes = UserFactory.create_batch(size=3)
         post = PostFactory(likes=likes)
-        self.assertEqual(post.likes.count(), 3)
+        super(TestPostModal, self).validate_many_to_many(
+            qs=post.likes, count=(len(likes))
+        )

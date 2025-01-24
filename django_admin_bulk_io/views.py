@@ -96,6 +96,7 @@ class BulkImportView(BulkIOBaseView):
                     logger.info(f"Successfully saved the instance {s.data}")
                 else:
                     errors.append(s.errors)
+                    log_messages(s.errors, logger=logger.warning)
             BulkIOImport.objects.create(file=file)
             message = BulkIOMessages.CSV_IMPORTED_SUCCESSFULLY % (
                 len(data) - len(errors),
@@ -104,7 +105,6 @@ class BulkImportView(BulkIOBaseView):
                 log_message = LogMessages.LOGGER_NOT_CONFIGURED
                 if logger:
                     log_message = LogMessages.VIEW_LOG_FOR_DETAILS
-                    log_messages(errors=errors, logger=logger.warning)
                 message = BulkIOMessages.CSV_IMPORTED_WITH_EXCEPTIONS % (
                     len(data) - len(errors),
                     log_message,

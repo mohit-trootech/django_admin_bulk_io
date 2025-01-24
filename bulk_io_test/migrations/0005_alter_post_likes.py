@@ -5,7 +5,6 @@ from django.db import migrations, models
 
 
 class Migration(migrations.Migration):
-
     dependencies = [
         ("bulk_io_test", "0004_post_comment_post_likes"),
         migrations.swappable_dependency(settings.AUTH_USER_MODEL),

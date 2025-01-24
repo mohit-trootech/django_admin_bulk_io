@@ -5,7 +5,6 @@ from django.db import migrations, models
 
 
 class Migration(migrations.Migration):
-
     dependencies = [
         ("django_admin_bulk_io", "0003_bulkioexport_title_bulkioimport_title"),
     ]

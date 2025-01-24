@@ -22,7 +22,6 @@ from django_admin_bulk_io.utils.utils import (
 from django.core.files.base import ContentFile
 from logging import getLogger
 from django_admin_bulk_io.serializer import BulkIODynamicSerializer
-from django_admin_bulk_io.utils.bulkio_threading import MultiProcessPool
 from django_admin_bulk_io.utils.response import JsonResponseRenderer
 
 logger = getLogger(__name__)
@@ -93,7 +92,6 @@ class BulkImportView(BulkIOBaseView):
                 s = serializer(data=item)
                 if s.is_valid():
                     s.save()
-                    logger.info(f"Successfully saved the instance {s.data}")
                 else:
                     errors.append(s.errors)
                     log_messages(s.errors, logger=logger.warning)
@@ -124,7 +122,6 @@ bulk_import_view = BulkImportView.as_view()
 
 
 class BulkExportView(BulkIOBaseView):
-
     def get_queryset(self):
         return self.model.objects.all()
 
@@ -133,6 +130,11 @@ class BulkExportView(BulkIOBaseView):
 
     def post(self, request, *args, **kwargs):
         try:
+            if not request.POST:
+                return self.renderer.render_bad_request(
+                    data={"message": BulkIOException.REQUEST_PAYLOAD_EMPTY},
+                )
+
             queryset = self.get_queryset()
             if Keys.SELECT_ALL not in request.POST:
                 payload = request.POST.get(Keys.SELECTED_ACTION).split(",")
@@ -153,6 +155,11 @@ class BulkExportView(BulkIOBaseView):
                     "file": {"url": file.url, "title": file.title},
                 },
             )
+        except (KeyError, ValueError):
+            return self.renderer.render_bad_request(
+                data={"message": BulkIOException.INVALID_REQUEST_BODY},
+            )
+
         except Exception as err:
             log_messages(
                 errors=[LogMessages.UNKNOWN_EXCEPTION_OCCURED % str(err)],

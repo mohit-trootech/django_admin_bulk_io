@@ -13,7 +13,6 @@ site.register(BulkIOImport)
 
 
 class BulkIOModelAdmin(ModelAdmin):
-
     def get_urls(self, *args, **kwargs):
         """
         This method overrides existing get_urls method to returns urls for bulk import and export.

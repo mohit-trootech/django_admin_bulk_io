@@ -4,7 +4,6 @@ from utils.utils import get_model
 
 Comment = get_model(app_label="bulk_io_test", model_name="Comment")
 Post = get_model(app_label="bulk_io_test", model_name="Post")
-Like = get_model(app_label="bulk_io_test", model_name="Like")
 
 
 @register(Comment)
@@ -23,6 +22,3 @@ class PostAdmin(BulkIOModelAdmin):
     search_fields = ("title",)
     fieldsets = (("General", {"fields": ("title", "description", "comment", "likes")}),)
     filter_horizontal = ("likes",)
-
-
-site.register(Like)

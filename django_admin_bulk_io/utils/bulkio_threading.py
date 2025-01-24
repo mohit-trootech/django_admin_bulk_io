@@ -17,7 +17,6 @@ class MultiProcessPool:
             self.error_queue.put(serializer.errors)
 
     def multiprocess_pool(self):
-
         with Manager() as manager:
             self.error_queue = manager.Queue()
             with Pool(processes=4) as pool:

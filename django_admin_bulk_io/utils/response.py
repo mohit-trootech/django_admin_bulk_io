@@ -3,7 +3,6 @@ from http import HTTPStatus
 
 
 class JsonResponseRenderer:
-
     @classmethod
     def render_response(cls, data: dict, status: int):
         """

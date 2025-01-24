@@ -24,10 +24,6 @@ class Comment(TitleDescriptionModel, TimeStampedModel, ActivatorModel):
         verbose_name_plural = "Comments"
 
 
-class Like(Model):
-    count = IntegerField(default=0)
-
-
 class Post(TitleDescriptionModel):
     comment = ForeignKey(Comment, on_delete=CASCADE)
     likes = ManyToManyField("auth.User")
@@ -38,3 +34,7 @@ class Post(TitleDescriptionModel):
     class Meta:
         verbose_name = "Post"
         verbose_name_plural = "Posts"
+
+    @property
+    def like_count(self):
+        return self.likes.count()

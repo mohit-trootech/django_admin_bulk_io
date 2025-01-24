@@ -120,6 +120,9 @@ class BulkIOException:
     UNKNOWN_EXCEPTION_OCCURED = "Error, Please view log file for details."
     FILE_TYPE_NOT_SUPPORTED = "File type not supported."
     INVALID_CSV_FILE = "Invalid CSV file."
+    INVALID_JSON_FILE = "Invalid JSON file."
+    REQUEST_PAYLOAD_EMPTY = "No data to export."
+    INVALID_REQUEST_BODY = "Invalid request body."
 
 
 class LogMessages:

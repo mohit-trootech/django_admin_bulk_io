@@ -1,5 +1,4 @@
 import pandas as pd
-from json import loads
 from random import randint
 from rest_framework import status
 from utils.utils import get_model
@@ -31,9 +30,8 @@ class TestBulkExportBase(TestBulkIOBase):
     def select_across(self, qs: list):
         response = self.client.post(self.url, data={"select_across": 1})
         self.assertEqual(status.HTTP_200_OK, response.status_code)
-        content = loads(response.content)
-        self.handle_success_file_response(content=content)
-        data = self.export_file_data(url=self.BASE_DIR + content["file"]["url"])
+        self.handle_success_file_response(content=response.json())
+        data = self.export_file_data(url=self.BASE_DIR + response.json()["file"]["url"])
         self.assertEqual(len(qs), len(data))
 
     def select_some(self, qs: list):
@@ -42,44 +40,37 @@ class TestBulkExportBase(TestBulkIOBase):
             self.url, data={"_selected_action": ",".join(map(str, ids))}
         )
         self.assertEqual(status.HTTP_200_OK, response.status_code)
-        content = loads(response.content)
-        self.handle_success_file_response(content=content)
-        data = self.export_file_data(url=self.BASE_DIR + content["file"]["url"])
+        self.handle_success_file_response(content=response.json())
+        data = self.export_file_data(url=self.BASE_DIR + response.json()["file"]["url"])
         self.assertEqual(len(ids), len(data))
 
     def select_none(self):
         response = self.client.post(self.url, data={})
         self.assertEqual(status.HTTP_400_BAD_REQUEST, response.status_code)
-        content = loads(response.content)
-        self.assertEqual(BulkIOException.REQUEST_PAYLOAD_EMPTY, content["message"])
+        self.assertEqual(
+            BulkIOException.REQUEST_PAYLOAD_EMPTY, response.json()["message"]
+        )
 
     def select_invalid(self):
         response = self.client.post(self.url, data={"_selected_action": ""})
         self.assertEqual(status.HTTP_400_BAD_REQUEST, response.status_code)
-        content = loads(response.content)
-        self.assertEqual(BulkIOException.INVALID_REQUEST_BODY, content["message"])
+        self.assertEqual(
+            BulkIOException.INVALID_REQUEST_BODY, response.json()["message"]
+        )
 
 
 class CommentSetUp(TestBulkExportBase):
 
     def setUp(self):
-        super().setUp()
         self.model = Comment
-        self.opts = self.model._meta
-        self.url = self.bulk_io_url(
-            info=(self.opts.app_label, self.opts.model_name), action=self.ACTION
-        )
+        super().setUp()
 
 
 class PostSetUp(TestBulkExportBase):
 
     def setUp(self):
-        super(PostSetUp, self).setUp()
         self.model = Post
-        self.opts = self.model._meta
-        self.url = self.bulk_io_url(
-            info=(self.opts.app_label, self.opts.model_name), action=self.ACTION
-        )
+        super(PostSetUp, self).setUp()
 
 
 class CommentBulkExportTest(CommentSetUp):

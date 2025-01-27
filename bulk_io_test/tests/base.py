@@ -12,6 +12,10 @@ class TestBulkIOBase(TestCase):
     BASE_DIR = str(settings.BASE_DIR)
 
     def setUp(self):
+        self.opts = self.model._meta
+        self.url = self.bulk_io_url(
+            info=(self.opts.app_label, self.opts.model_name), action=self.ACTION
+        )
         self.user = self.create_superuser()
         self.client.force_login(self.user)
 

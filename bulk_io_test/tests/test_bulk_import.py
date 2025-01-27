@@ -1,149 +1,228 @@
 from bulk_io_test.tests.base import TestBulkIOBase
-from random import randint, choice, uniform
+from random import choice
 import pandas as pd
-from io import StringIO
 from utils.utils import get_model
-import factory
 from faker import Faker
-import csv
+from django_extensions.db.models import ActivatorModel
+from django.core.files.base import ContentFile
+from http import HTTPStatus
+from django_admin_bulk_io.utils.constants import BulkIOException, BulkIOMessages
+from bulk_io_test.tests.factory import CommentFactory, UserFactory
 
 fake = Faker()
 Comment = get_model(app_label="bulk_io_test", model_name="Comment")
 Post = get_model(app_label="bulk_io_test", model_name="Post")
+DEFAULT_NUM_ROWS = 10
 
 
 class TestBulkImportBase(TestBulkIOBase):
     ACTION = "bulk_import"
 
-    def handle_success_response(self, content: dict):
-        self.assertEqual(200, content["status"])
-        self.assertEqual("success", content["message"])
+    def create_csv_file_from_content(
+        self, content: str, name: str = "test.csv"
+    ) -> ContentFile:
+        """
+        Create a csv file from given content.
+        :param content: str
+        :param name: str = "test.csv"
+        """
+        return ContentFile(content=content, name=name)
 
-    # def import_file_data(self, filepath: str):
-    #     with open(filepath, "rb") as fp:
-    #         response = self.client.post(self.url, data={"file": fp})
-    #         self.assertEqual(200, response.status_code)
-    #         content = response.json()
-    #         self.handle_success_response(content=content)
+    def bulk_import_post_no_file(self):
+        response = self.client.post(self.url)
+        self.assertEqual(HTTPStatus.BAD_REQUEST, response.status_code)
+        self.assertEqual(BulkIOException.FILE_NOT_FOUND, response.json()["message"])
 
-    def get_model_fields(self):
-        return self.opts.fields
+    def bulk_import_post_invalid_file_type(self):
+        file = self.create_csv_file_from_content(
+            content="invalid file content", name="test.txt"
+        )
+        response = self.client.post(self.url, data={"file": file})
+        self.assertEqual(HTTPStatus.BAD_REQUEST, response.status_code)
+        self.assertEqual(
+            BulkIOException.FILE_TYPE_NOT_SUPPORTED, response.json()["message"]
+        )
 
-    def create_dynamic_csv_content(model, num_rows):
+    def invalid_csv_file(self):
+        file = self.create_csv_file_from_content(content="invalid file content")
+        response = self.client.post(self.url, data={"file": file})
+        self.assertEqual(HTTPStatus.BAD_REQUEST, response.status_code)
+        self.assertEqual(BulkIOException.INVALID_CSV_FILE, response.json()["message"])
 
-        fields = model._meta.fields
-        data = []
-
-        for _ in range(num_rows):
-            row_data = {}
-            for field in fields:
-                # Generate fake data based on field type
-                if isinstance(field, factory.django.ImageField):
-                    row_data[field.name] = "path/to/image.jpg"
-                elif isinstance(field, factory.django.FileField):
-                    row_data[field.name] = "path/to/file.txt"
-                elif isinstance(field, factory.django.BooleanField):
-                    row_data[field.name] = choice([True, False])
-                elif isinstance(field, factory.django.DateTimeField):
-                    row_data[field.name] = (
-                        fake.date_time_this_year().isoformat()
-                    )  # ISO format for datetime
-                elif isinstance(field, factory.django.DateField):
-                    row_data[field.name] = (
-                        fake.date_this_year().isoformat()
-                    )  # ISO format for date
-                elif isinstance(field, factory.django.ForeignKey):
-                    related_model = field.related_model
-                    try:
-                        related_object = related_model.objects.order_by("?").first()
-                        if related_object:
-                            row_data[field.name] = related_object.pk
-                        else:
-                            row_data[field.name] = ""
-                    except Exception:
-                        row_data[field.name] = (
-                            ""  # Handle cases where no related model instances exist
-                        )
-                elif isinstance(field, factory.django.ManyToManyField):
-                    # Skip ManyToManyFields (handle separately if needed)
-                    continue  # Or generate comma-separated values
-                elif isinstance(
-                    field, (factory.django.IntegerField, factory.django.BigIntegerField)
-                ):  # Handle Integer Fields
-                    row_data[field.name] = randint(1, 1000)
-                elif isinstance(field, factory.django.FloatField):  # Handle FloatField
-                    row_data[field.name] = uniform(1.0, 1000.0)
-
-                else:  # CharField, TextField, etc.
-                    row_data[field.name] = fake.word()
-
-            data.append(row_data)
-        df = pd.DataFrame(data)
-        csv_buffer = StringIO()
-        df.to_csv(
-            csv_buffer, index=False, quoting=csv.QUOTE_ALL
-        )  # Use quoting to handle commas in fields
-        csv_content = csv_buffer.getvalue()
-        csv_buffer.close()
-        return csv_content
+    def bulk_import_post_empty_file(self):
+        file = self.create_csv_file_from_content(content=b"", name="test.csv")
+        response = self.client.post(self.url, data={"file": file})
+        self.assertEqual(HTTPStatus.BAD_REQUEST, response.status_code)
+        self.assertEqual(BulkIOException.FILE_EMPTY, response.json()["message"])
 
 
 class TestBulkImportComment(TestBulkImportBase):
 
     def setUp(self):
-        super().setUp()
         self.model = Comment
-        self.opts = self.model._meta
+        super(TestBulkImportComment, self).setUp()
 
-    def test_bulk_import_comment(self):
-        csv_content = self.create_dynamic_csv_content(self.model, num_rows=10)
-        csv_file = StringIO(csv_content)
-        response = self.client.post(self.url, data={"file": csv_file})
-        self.assertEqual(200, response.status_code)
-        content = response.json()
-        self.handle_success_response(content=content)
-        self.assertEqual(10, Comment.objects.count())
+    def create_valid_csv_content(self, num_rows: int):
+        """
+        Create CSV content for self.model with num_rows rows.
+        :param num_rows: int
+        """
+        df = pd.DataFrame(
+            {
+                "title": [fake.name() for _ in range(num_rows)],
+                "description": [fake.text() for _ in range(num_rows)],
+                "created": [fake.date() for _ in range(num_rows)],
+                "status": [
+                    choice(
+                        [ActivatorModel.INACTIVE_STATUS, ActivatorModel.ACTIVE_STATUS]
+                    )
+                    for _ in range(num_rows)
+                ],
+            }
+        )
+        return df.to_csv(index=False)
 
-    def test_bulk_import_comment_with_errors(self):
-        # Create CSV data with some invalid entries
-        csv_content = self.create_dynamic_csv_content(self.model, num_rows=10)
-        # Introduce an error, e.g., missing required field
-        csv_content = csv_content.replace("test", "")
-        csv_file = StringIO(csv_content)
-        response = self.client.post(self.url, data={"file": csv_file})
-        self.assertEqual(200, response.status_code)
-        content = response.json()
-        self.assertEqual(200, content["status"])
-        self.assertEqual("partial_success", content["message"])
-        self.assertIn("errors", content)
-        # Assertions to check the error details
+    def create_invalid_csv_content(self, num_rows: int):
+        """
+        Create invalid csv content for self.model with num_rows rows. if iteration is odd, create invalid data entry by removing the title.
+        :param num_rows: int
+        """
+        items = []
+        for row in range(num_rows):
+            if row % 2 == 0:
+                items.append(
+                    {
+                        "title": fake.name(),
+                        "description": fake.text(),
+                        "created": fake.date(),
+                        "status": choice(
+                            [
+                                ActivatorModel.INACTIVE_STATUS,
+                                ActivatorModel.ACTIVE_STATUS,
+                            ]
+                        ),
+                    }
+                )
+            else:
+                items.append(
+                    {
+                        "title": "",
+                        "description": fake.text(),
+                        "created": fake.date(),
+                        "status": choice(
+                            [
+                                ActivatorModel.INACTIVE_STATUS,
+                                ActivatorModel.ACTIVE_STATUS,
+                            ]
+                        ),
+                    }
+                )
+        df = pd.DataFrame(items)
+        return df.to_csv(index=False)
+
+    def test_bulk_import_no_errors(self):
+        """
+        Test bulk import of models with all validated data
+        """
+        csv_content = self.create_valid_csv_content(num_rows=DEFAULT_NUM_ROWS)
+        file = self.create_csv_file_from_content(content=csv_content)
+        response = self.client.post(self.url, data={"file": file})
+        self.assertEqual(HTTPStatus.OK, response.status_code)
+        self.assertEqual(DEFAULT_NUM_ROWS, Comment.objects.count())
+        self.assertEqual(
+            BulkIOMessages.CSV_IMPORTED_SUCCESSFULLY % DEFAULT_NUM_ROWS,
+            response.json()["message"],
+        )
+
+    def test_bulk_import_with_errors(self):
+        """
+        Test bulk import of models with some invalid data
+        """
+        csv_content = self.create_invalid_csv_content(num_rows=DEFAULT_NUM_ROWS)
+        file = self.create_csv_file_from_content(content=csv_content)
+        response = self.client.post(self.url, data={"file": file})
+        self.assertEqual(HTTPStatus.OK, response.status_code)
+        self.assertEqual(DEFAULT_NUM_ROWS // 2, Comment.objects.count())
+
+    def test_bulk_import_post_invalid_file_type(self):
+        super(TestBulkImportComment, self).bulk_import_post_invalid_file_type()
+
+    def test_invalid_csv_file(self):
+        super(TestBulkImportComment, self).invalid_csv_file()
+
+    def test_bulk_import_post_empty_file(self):
+        super(TestBulkImportComment, self).bulk_import_post_empty_file()
+
+    def test_bulk_import_post_no_file(self):
+        super(TestBulkImportComment, self).bulk_import_post_no_file()
 
 
 class TestBulkImportPost(TestBulkImportBase):
     def setUp(self):
-        super().setUp()
         self.model = Post
-        self.opts = self.model._meta
+        super(TestBulkImportPost, self).setUp()
 
-    def test_bulk_import_post(self):
-        csv_content = self.create_dynamic_csv_content(self.model, num_rows=10)
-        csv_file = StringIO(csv_content)
-        response = self.client.post(self.url, data={"file": csv_file})
-        self.assertEqual(200, response.status_code)
-        content = response.json()
-        self.handle_success_response(content=content)
-        self.assertEqual(10, Post.objects.count())
+    def create_valid_csv_content(self, num_rows: int):
+        comment = CommentFactory.create()
+        users = UserFactory.create_batch(num_rows)
+        df = pd.DataFrame(
+            {
+                "title": [fake.name() for _ in range(num_rows)],
+                "description": [fake.text() for _ in range(num_rows)],
+                "comment": comment.id,
+                "likes": [[user.id for user in users] for _ in range(num_rows)],
+            }
+        )
+        return df.to_csv(index=False)
+
+    def create_invalid_csv_content(self, num_rows: int):
+        comment = CommentFactory.create()
+        users = UserFactory.create_batch(num_rows)
+        items = []
+        for row in range(num_rows):
+            if row % 2 == 0:
+                items.append(
+                    {
+                        "title": fake.name(),
+                        "description": fake.text(),
+                        "comment": comment.id,
+                        "likes": [user.id for user in users],
+                    }
+                )
+            else:
+                items.append(
+                    {
+                        "title": "",
+                        "description": fake.text(),
+                        "comment": comment.id,
+                        "likes": [user.id for user in users],
+                    }
+                )
+        df = pd.DataFrame(items)
+        return df.to_csv(index=False)
+
+    def test_bulk_import_post_no_errors(self):
+        csv_content = self.create_valid_csv_content(num_rows=DEFAULT_NUM_ROWS)
+        file = self.create_csv_file_from_content(content=csv_content)
+        response = self.client.post(self.url, data={"file": file})
+        self.assertEqual(HTTPStatus.OK, response.status_code)
+        self.assertEqual(DEFAULT_NUM_ROWS, Post.objects.count())
 
     def test_bulk_import_post_with_errors(self):
-        # Create CSV data with some invalid entries
-        csv_content = self.create_dynamic_csv_content(self.model, num_rows=10)
-        # Introduce an error, e.g., missing required field
-        csv_content = csv_content.replace("test", "")
-        csv_file = StringIO(csv_content)
-        response = self.client.post(self.url, data={"file": csv_file})
-        self.assertEqual(200, response.status_code)
-        content = response.json()
-        self.assertEqual(200, content["status"])
-        self.assertEqual("partial_success", content["message"])
-        self.assertIn("errors", content)
-        # Assertions to check the error details
+        csv_content = self.create_invalid_csv_content(num_rows=DEFAULT_NUM_ROWS)
+        file = self.create_csv_file_from_content(content=csv_content)
+        response = self.client.post(self.url, data={"file": file})
+        self.assertEqual(HTTPStatus.OK, response.status_code)
+        self.assertEqual(DEFAULT_NUM_ROWS // 2, Post.objects.count())
+
+    def test_bulk_import_post_invalid_file_type(self):
+        super(TestBulkImportPost, self).bulk_import_post_invalid_file_type()
+
+    def test_invalid_csv_file(self):
+        super(TestBulkImportPost, self).invalid_csv_file()
+
+    def test_bulk_import_post_empty_file(self):
+        super(TestBulkImportPost, self).bulk_import_post_empty_file()
+
+    def test_bulk_import_post_no_file(self):
+        super(TestBulkImportPost, self).bulk_import_post_no_file()

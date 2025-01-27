@@ -78,6 +78,11 @@ class BulkImportView(BulkIOBaseView):
                 return self.renderer.render_bad_request(
                     data={"message": BulkIOException.FILE_TYPE_NOT_SUPPORTED}
                 )
+            # Check if the file is empty
+            if not file.size:
+                return self.renderer.render_bad_request(
+                    data={"message": BulkIOException.FILE_EMPTY}
+                )
             data = get_data_from_csv_file(
                 model=self.model, csv_file=file, fields=self.fields
             )
@@ -85,7 +90,6 @@ class BulkImportView(BulkIOBaseView):
                 return self.renderer.render_bad_request(
                     data={"message": BulkIOException.INVALID_CSV_FILE}
                 )
-            data.append({})
             serializer = self.get_serializer()
             errors = []
             for item in data:

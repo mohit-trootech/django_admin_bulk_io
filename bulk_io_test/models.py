@@ -4,8 +4,6 @@ from django_extensions.db.models import (
     ActivatorModel,
 )
 from django.db.models import (
-    Model,
-    IntegerField,
     DateField,
     ForeignKey,
     ManyToManyField,

@@ -1,12 +1,14 @@
-import pandas as pd
+from ast import literal_eval
+from logging import Logger
 from os import makedirs
+
+import pandas as pd
 from django.conf import settings
 from django.contrib import admin
-from django.utils.timezone import now
-from django_admin_bulk_io.utils.constants import FILE_NAME_TEMPLATE
 from django.db.models import Model
-from logging import Logger
-from ast import literal_eval
+from django.utils.timezone import now
+
+from django_admin_bulk_io.utils.constants import FILE_NAME_TEMPLATE
 
 
 def log_messages(errors: list, logger: Logger) -> None:
@@ -24,20 +26,26 @@ def get_model_fields_info(model: Model) -> tuple[list[str], list[str]]:
     :param model: model instance
     :return: tuple of required and optional fields list
     """
-    required = []
-    optional = []
-    for field in model._meta.fields:
-        if field.blank is False and field.null is False:
-            required.append(field)
-        else:
-            optional.append(field)
+    required = set()
+    optional = set()
+    for field in model._meta.get_fields():
+        try:
+            if field.field.blank is False and field.field.null is False:
+                required.add(field.field)
+            else:
+                optional.add(field.field)
+        except AttributeError:
+            if field.blank is False and field.null is False:
+                required.add(field)
+            else:
+                optional.add(field)
     if model._meta.many_to_many:
         for field in model._meta.many_to_many:
             if field.blank is False and field.null is False:
-                required.append(field)
+                required.add(field)
             else:
-                optional.append(field)
-    return required, optional
+                optional.add(field)
+    return list(required), list(optional)
 
 
 def get_admin_class_for_model_instance(model_instance: Model) -> admin.ModelAdmin:
@@ -119,6 +127,8 @@ def get_data_from_csv_file(model: Model, csv_file: str, fields: list) -> dict:
             df.dropna(subset=[field.name], inplace=True)
     for field in optional:
         if field.name in df.columns:
+            if field.many_to_many:
+                df[field.name] = df[field.name].apply(lambda x: literal_eval(x))
             if df[field.name].isna().any():
                 df.drop(columns=[field.name], inplace=True)
     return df.to_dict(orient="records")

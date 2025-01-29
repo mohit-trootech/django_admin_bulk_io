@@ -1,10 +1,11 @@
-from django.http import JsonResponse
 from http import HTTPStatus
+
+from django.http import JsonResponse
 
 
 class JsonResponseRenderer:
     @classmethod
-    def render_response(cls, data: dict, status: int):
+    def render_response(cls, data: dict, status: int) -> JsonResponse:
         """
         This method renders the json response.
         """

@@ -3,7 +3,7 @@
  */
 const selectAcrossInput = "[name='select_across']";
 const selectedAction = "[name=_selected_action]";
-const bulkIOFile = "#bulk-io-fileinput";
+const bulkIOFile = "#bulk-io-fileinput-import";
 const BulkIOAdminModal = "#bulkIoAdminModal";
 
 /**
@@ -52,9 +52,9 @@ const bulkIOExportSuccess = (response) => {
  * @param event event object
  * @param url backend import url
  */
-const bulkIOImport = async (event, url) => {
+const bulkIOImport = async (event, url, id) => {
   event.preventDefault();
-  const bulkIoFileInput = document.querySelector(bulkIOFile);
+  const bulkIoFileInput = document.querySelector(id);
   if (bulkIoFileInput.files.length) {
     const files = bulkIoFileInput.files;
     const formData = new FormData();

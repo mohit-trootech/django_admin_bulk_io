@@ -1,28 +1,36 @@
+from logging import getLogger
+
 from django.apps import apps
-from django.db.models import Model
-from django.db.models import QuerySet
-from django.views.decorators.csrf import csrf_exempt
+from django.core.files.base import ContentFile
+from django.db.models import Model, QuerySet
+from django.http import JsonResponse
 from django.utils.decorators import method_decorator
+from django.views import View
+from django.views.decorators.csrf import csrf_exempt
+
+from django_admin_bulk_io.serializer import BulkIODynamicSerializer
 from django_admin_bulk_io.utils.constants import (
-    Templates,
+    AcceptedTypes,
     BulkIOException,
     BulkIOMessages,
     Keys,
     LogMessages,
-    AcceptedTypes,
 )
-from django.views import View
+from django_admin_bulk_io.utils.exceptions import (
+    EmptyFile,
+    FileTypeNotSupported,
+    InvalidCSVFile,
+    RequestBodyEmpty,
+)
+from django_admin_bulk_io.utils.response import JsonResponseRenderer
 from django_admin_bulk_io.utils.utils import (
-    get_admin_class_for_model_instance,
+    generate_csv_filename,
     generate_csv_from_serialized_data,
     get_data_from_csv_file,
-    generate_csv_filename,
     log_messages,
+    save_csv_file_in_base_dir,
+    validate_data_from_csv_file,
 )
-from django.core.files.base import ContentFile
-from logging import getLogger
-from django_admin_bulk_io.serializer import BulkIODynamicSerializer
-from django_admin_bulk_io.utils.response import JsonResponseRenderer
 
 logger = getLogger(__name__)
 
@@ -40,9 +48,19 @@ BulkIOImport = get_model(app_label="django_admin_bulk_io", model_name="BulkIOImp
 
 @method_decorator(csrf_exempt, name="dispatch")
 class BulkIOBaseView(View):
-    template_name = Templates.BASE_IO
+    import_model = BulkIOImport
+    export_model = BulkIOExport
     renderer = JsonResponseRenderer
     serializer_class = BulkIODynamicSerializer
+
+    def create_import_model_file(self, file):
+        return self.import_model.objects.create(file=file)
+
+    def create_export_model_file(self, file: ContentFile):
+        return self.export_model.objects.create(file=file)
+
+    def request_body_empty(self) -> JsonResponse:
+        raise RequestBodyEmpty(BulkIOException.REQUEST_BODY_EMPTY)
 
     def get_serializer(self):
         self.serializer_class.Meta.model = self.model
@@ -53,43 +71,37 @@ class BulkIOBaseView(View):
             path for path in self.request.path.split("/") if path not in ["", "admin"]
         ]
         self.model = get_model(app_label=self.app_label, model_name=self.model_name)
-        self.admin_class = get_admin_class_for_model_instance(model_instance=self.model)
-        self.fields = self.admin_class.get_fields(request=self.request)
         return super().dispatch(request, *args, **kwargs)
 
 
-class BulkImportView(BulkIOBaseView):
-    template_name = Templates.BULK_IMPORT_HTML
+class BulkImportValidateBase(BulkIOBaseView):
+
+    def validate_file_content_type(self, file):
+        if file.content_type not in AcceptedTypes.get_accepted_types_list():
+            raise FileTypeNotSupported(BulkIOException.FILE_TYPE_NOT_SUPPORTED)
+
+    def is_file_empty(self, file):
+        if not file.size:
+            raise EmptyFile(BulkIOException.FILE_EMPTY)
+
+    def post(self, request, *args, **kwargs):
+        if not request.FILES:
+            self.request_body_empty()
+        file = request.FILES["file"]
+        self.validate_file_content_type(file=file)
+        self.is_file_empty(file=file)
+        return file
+
+
+class BulkImportView(BulkImportValidateBase):
 
     def post(self, request, *args, **kwargs):
         try:
-            if not request.FILES:
-                log_messages(
-                    errors=[LogMessages.NO_FILES_TO_IMPORT], logger=logger.warning
-                )
-                return self.renderer.render_bad_request(
-                    data={"message": BulkIOException.FILE_NOT_FOUND}
-                )
-            file = request.FILES["file"]
-            if file.content_type not in AcceptedTypes.get_accepted_types_list():
-                log_messages(
-                    errors=[LogMessages.FILE_TYPE_NOT_SUPPORTED], logger=logger.warning
-                )
-                return self.renderer.render_bad_request(
-                    data={"message": BulkIOException.FILE_TYPE_NOT_SUPPORTED}
-                )
-            # Check if the file is empty
-            if not file.size:
-                return self.renderer.render_bad_request(
-                    data={"message": BulkIOException.FILE_EMPTY}
-                )
-            data = get_data_from_csv_file(
-                model=self.model, csv_file=file, fields=self.fields
-            )
+            file = super(BulkImportView, self).post(request, *args, **kwargs)
+            data = get_data_from_csv_file(model=self.model, csv_str=file)
             if not data:
-                return self.renderer.render_bad_request(
-                    data={"message": BulkIOException.INVALID_CSV_FILE}
-                )
+                raise InvalidCSVFile(BulkIOException.INVALID_CSV_FILE)
+            self.create_import_model_file(file=file)
             serializer = self.get_serializer()
             errors = []
             for item in data:
@@ -98,8 +110,7 @@ class BulkImportView(BulkIOBaseView):
                     s.save()
                 else:
                     errors.append(s.errors)
-                    log_messages(s.errors, logger=logger.warning)
-            BulkIOImport.objects.create(file=file)
+                    log_messages(error=s.errors, logger=logger.warning)
             message = BulkIOMessages.CSV_IMPORTED_SUCCESSFULLY % (
                 len(data) - len(errors),
             )
@@ -112,9 +123,17 @@ class BulkImportView(BulkIOBaseView):
                     log_message,
                 )
             return self.renderer.render_ok(data={"message": message})
+        except EmptyFile as ef:
+            return self.renderer.render_bad_request(data={"message": str(ef)})
+        except FileTypeNotSupported as ftnse:
+            return self.renderer.render_bad_request(data={"message": str(ftnse)})
+        except InvalidCSVFile as icf:
+            return self.renderer.render_bad_request(data={"message": str(icf)})
+        except RequestBodyEmpty as rbe:
+            return self.renderer.render_bad_request(data={"message": str(rbe)})
         except Exception as err:
             log_messages(
-                errors=[LogMessages.UNKNOWN_EXCEPTION_OCCURED % str(err)],
+                error=LogMessages.UNKNOWN_EXCEPTION_OCCURED % str(err),
                 logger=logger.error,
             )
             return self.renderer.render_internal_server_error(
@@ -123,6 +142,49 @@ class BulkImportView(BulkIOBaseView):
 
 
 bulk_import_view = BulkImportView.as_view()
+
+
+class BulkValidateView(BulkImportValidateBase):
+
+    def post(self, request, *args, **kwargs):
+        try:
+            file = super(BulkValidateView, self).post(request, *args, **kwargs)
+            data = validate_data_from_csv_file(model=self.model, csv_str=file)
+            if not data:
+                raise InvalidCSVFile(BulkIOException.INVALID_CSV_FILE)
+            # create new df with existing columms and add new column validation which include details of each row validation
+            # if exception in row add list of exceptions else Validated
+            serializer = self.get_serializer()
+            validated_data = []
+            for item in data:
+                s = serializer(data=item)
+                if s.is_valid():
+                    item["validation"] = "Validated"
+                    validated_data.append(item)
+                else:
+                    item["validation"] = s.errors
+                    validated_data.append(item)
+
+            return self.renderer.render_ok(data={})
+        except EmptyFile as ef:
+            return self.renderer.render_bad_request(data={"message": str(ef)})
+        except FileTypeNotSupported as ftnse:
+            return self.renderer.render_bad_request(data={"message": str(ftnse)})
+        except InvalidCSVFile as icf:
+            return self.renderer.render_bad_request(data={"message": str(icf)})
+        except RequestBodyEmpty as rbe:
+            return self.renderer.render_bad_request(data={"message": str(rbe)})
+        except Exception as err:
+            log_messages(
+                error=LogMessages.UNKNOWN_EXCEPTION_OCCURED % str(err),
+                logger=logger.error,
+            )
+            return self.renderer.render_internal_server_error(
+                data={"message": BulkIOException.UNKNOWN_EXCEPTION_OCCURED},
+            )
+
+
+bulk_validate_view = BulkValidateView.as_view()
 
 
 class BulkExportView(BulkIOBaseView):
@@ -135,22 +197,17 @@ class BulkExportView(BulkIOBaseView):
     def post(self, request, *args, **kwargs):
         try:
             if not request.POST:
-                return self.renderer.render_bad_request(
-                    data={"message": BulkIOException.REQUEST_PAYLOAD_EMPTY},
-                )
-
+                self.request_body_empty()
             queryset = self.get_queryset()
             if Keys.SELECT_ALL not in request.POST:
                 payload = request.POST.get(Keys.SELECTED_ACTION).split(",")
                 if not payload:
-                    return self.renderer.render_bad_request(
-                        data={"message": BulkIOException.REQUEST_BODY_EMPTY},
-                    )
+                    self.request_body_empty()
                 queryset = self.get_queryset_with_ids(queryset=queryset, ids=payload)
             data = self.get_serializer()(queryset, many=True).data
             csv_str = generate_csv_from_serialized_data(data=data)
             title = generate_csv_filename()
-            file = BulkIOExport.objects.create(
+            file = self.create_export_model_file(
                 file=ContentFile(content=csv_str, name=title)
             )
             return self.renderer.render_ok(
@@ -159,14 +216,15 @@ class BulkExportView(BulkIOBaseView):
                     "file": {"url": file.url, "title": file.title},
                 },
             )
+        except RequestBodyEmpty as rbe:
+            return self.renderer.render_bad_request(data={"message": str(rbe)})
         except (KeyError, ValueError):
             return self.renderer.render_bad_request(
                 data={"message": BulkIOException.INVALID_REQUEST_BODY},
             )
-
         except Exception as err:
             log_messages(
-                errors=[LogMessages.UNKNOWN_EXCEPTION_OCCURED % str(err)],
+                error=LogMessages.UNKNOWN_EXCEPTION_OCCURED % str(err),
                 logger=logger.error,
             )
             return self.renderer.render_internal_server_error(

@@ -1,12 +1,13 @@
-import pandas as pd
 from random import randint
-from rest_framework import status
-from utils.utils import get_model
-from django.core.files.base import ContentFile
-from bulk_io_test.tests.base import TestBulkIOBase
-from bulk_io_test.tests.factory import PostFactory, CommentFactory, UserFactory
-from django_admin_bulk_io.utils.constants import BulkIOMessages, BulkIOException
 
+import pandas as pd
+from django.core.files.base import ContentFile
+from rest_framework import status
+
+from bulk_io_test.tests.base import TestBulkIOBase
+from bulk_io_test.tests.factory import CommentFactory, PostFactory, UserFactory
+from django_admin_bulk_io.utils.constants import BulkIOException, BulkIOMessages
+from utils.utils import get_model
 
 Post = get_model(app_label="bulk_io_test", model_name="Post")
 Comment = get_model(app_label="bulk_io_test", model_name="Comment")
@@ -47,9 +48,7 @@ class TestBulkExportBase(TestBulkIOBase):
     def select_none(self):
         response = self.client.post(self.url, data={})
         self.assertEqual(status.HTTP_400_BAD_REQUEST, response.status_code)
-        self.assertEqual(
-            BulkIOException.REQUEST_PAYLOAD_EMPTY, response.json()["message"]
-        )
+        self.assertEqual(BulkIOException.REQUEST_BODY_EMPTY, response.json()["message"])
 
     def select_invalid(self):
         response = self.client.post(self.url, data={"_selected_action": ""})

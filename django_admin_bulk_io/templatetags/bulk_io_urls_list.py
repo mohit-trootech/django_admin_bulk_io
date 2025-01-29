@@ -1,5 +1,5 @@
-from django.template import Library
 from django import template
+from django.template import Library
 from django.urls import reverse
 from django.utils.safestring import mark_safe
 
@@ -45,14 +45,19 @@ class BulkIOUrlsNode(template.Node):
             return mark_safe(
                 """
                     <li>
-                        <button class="btn btn-primary"
+                        <button class="btn"
                             onclick="bulkIOExport(event, '%s')">
-                                Bulk Export
+                                <span class="text">Export</span><span>Download CSV</span>
                         </button>
                     </li>
                     <li>
-                        <button class="btn btn-secondary" data-bs-toggle="modal" data-bs-target="#bulkIoAdminModal">
-                            Bulk Import
+                        <button class="btn" data-bs-toggle="modal" data-bs-target="#bulkIoAdminModalRead">
+                            <span class="text">Import</span><span>Read CSV</span>
+                        </button>
+                    </li>
+                    <li>
+                        <button class="btn" data-bs-toggle="modal" data-bs-target="#bulkIoAdminModalValidate">
+                            <span class="text">Check</span><span>Validate CSV</span>
                         </button>
                     </li>
                 """

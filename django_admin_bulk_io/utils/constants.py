@@ -1,7 +1,7 @@
 # Django Admin Bulk I/O Constants
 
 FORM_CLASS_BASE = "form-control bg-light text-dark"
-FILE_NAME_TEMPLATE = "{base_path}/bulk_io/{app_label}/{model_name}/"
+FILE_NAME_TEMPLATE = "%s/bulk_io_validations/%s/%s/"
 
 
 class AcceptedTypes:
@@ -21,14 +21,6 @@ class Keys:
     ACTION_TOGGLE = "action-toggle"
     SELECTED_ACTION = "_selected_action"
     SELECT_ALL = "select_across"
-
-
-class Templates:
-    """Bulk IO - Templates"""
-
-    BASE_IO = "admin/bulk_io_base.html"
-    BULK_IMPORT_HTML = "admin/bulk_import.html"
-    BULK_EXPORT_HTML = "admin/bulk_export.html"
 
 
 class InputTypes:

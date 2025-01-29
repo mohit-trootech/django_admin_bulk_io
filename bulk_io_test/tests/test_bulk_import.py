@@ -1,13 +1,15 @@
-from bulk_io_test.tests.base import TestBulkIOBase
-from random import choice
-import pandas as pd
-from utils.utils import get_model
-from faker import Faker
-from django_extensions.db.models import ActivatorModel
-from django.core.files.base import ContentFile
 from http import HTTPStatus
-from django_admin_bulk_io.utils.constants import BulkIOException, BulkIOMessages
+from random import choice
+
+import pandas as pd
+from django.core.files.base import ContentFile
+from django_extensions.db.models import ActivatorModel
+from faker import Faker
+
+from bulk_io_test.tests.base import TestBulkIOBase
 from bulk_io_test.tests.factory import CommentFactory, UserFactory
+from django_admin_bulk_io.utils.constants import BulkIOException, BulkIOMessages
+from utils.utils import get_model
 
 fake = Faker()
 Comment = get_model(app_label="bulk_io_test", model_name="Comment")
@@ -31,7 +33,7 @@ class TestBulkImportBase(TestBulkIOBase):
     def bulk_import_post_no_file(self):
         response = self.client.post(self.url)
         self.assertEqual(HTTPStatus.BAD_REQUEST, response.status_code)
-        self.assertEqual(BulkIOException.FILE_NOT_FOUND, response.json()["message"])
+        self.assertEqual(BulkIOException.REQUEST_BODY_EMPTY, response.json()["message"])
 
     def bulk_import_post_invalid_file_type(self):
         file = self.create_csv_file_from_content(

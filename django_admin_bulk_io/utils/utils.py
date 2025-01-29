@@ -4,20 +4,18 @@ from os import makedirs
 
 import pandas as pd
 from django.conf import settings
-from django.contrib import admin
 from django.db.models import Model
 from django.utils.timezone import now
 
 from django_admin_bulk_io.utils.constants import FILE_NAME_TEMPLATE
 
 
-def log_messages(errors: list, logger: Logger) -> None:
+def log_messages(error: str, logger: Logger) -> None:
     """
     This method logs the errors.
     :param errors: list of errors
     """
-    for error in errors:
-        logger(error)
+    logger(error)
 
 
 def get_model_fields_info(model: Model) -> tuple[list[str], list[str]]:
@@ -48,18 +46,6 @@ def get_model_fields_info(model: Model) -> tuple[list[str], list[str]]:
     return list(required), list(optional)
 
 
-def get_admin_class_for_model_instance(model_instance: Model) -> admin.ModelAdmin:
-    """
-    Retrieves the ModelAdmin class associated with a model.
-    :param: model_instance: An model_instance of a Django model.
-    :return: The ModelAdmin class associated with the model, or None if not found.
-    """
-    for model, admin_class in admin.site._registry.items():
-        if model == model_instance:
-            return admin_class
-    return None
-
-
 def generate_csv_filename() -> str:
     """
     generate csv filename with timestamp
@@ -79,7 +65,7 @@ def generate_csv_from_serialized_data(data: dict) -> str:
     return df.to_csv(index=False)
 
 
-def save_csv_file_in_base_dir(csv_str: str, app_label: str, model_name: str) -> None:
+def save_csv_file_in_base_dir(csv_str: str, info: tuple) -> None:
     """
     save csv string in base dir handle exceptions
     :param csv_str: str
@@ -88,11 +74,7 @@ def save_csv_file_in_base_dir(csv_str: str, app_label: str, model_name: str) -> 
     :return: None
     """
     filename = generate_csv_filename()
-    file_path = FILE_NAME_TEMPLATE.format(
-        base_path=settings.BASE_DIR,
-        app_label=app_label,
-        model_name=model_name,
-    )
+    file_path = FILE_NAME_TEMPLATE % (settings.BASE_DIR, *info)
     try:
         makedirs(file_path)
     except FileExistsError:
@@ -106,7 +88,27 @@ def save_csv_file_in_base_dir(csv_str: str, app_label: str, model_name: str) -> 
     create_file()
 
 
-def get_data_from_csv_file(model: Model, csv_file: str, fields: list) -> dict:
+def validate_data_from_csv_file(model: Model, csv_str: str) -> dict:
+    """
+    import & clean csv file data for optional field and returns dict of data
+
+    :param model: Model
+    :param csv_file: str
+    :return: dict
+    """
+    df = pd.read_csv(csv_str)
+    df.drop_duplicates(inplace=True)
+    if model._meta.pk.name in df.columns:
+        df.drop(columns=[model._meta.pk.name], inplace=True)
+    _, optional = get_model_fields_info(model=model)  # noqa
+    for field in optional:
+        if field.name in df.columns:
+            if df[field.name].isna().any():
+                df.drop(columns=[field.name], inplace=True)
+    return df.to_dict(orient="records")
+
+
+def get_data_from_csv_file(model: Model, csv_str: str) -> dict:
     """
     import & clean csv file data and returns dict of data
     :param model: Model
@@ -115,7 +117,7 @@ def get_data_from_csv_file(model: Model, csv_file: str, fields: list) -> dict:
     :return: dict
     """
 
-    df = pd.read_csv(csv_file)
+    df = pd.read_csv(csv_str)
     df.drop_duplicates(inplace=True)
     if model._meta.pk.name in df.columns:
         df.drop(columns=[model._meta.pk.name], inplace=True)

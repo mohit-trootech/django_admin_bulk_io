@@ -116,7 +116,7 @@ def get_data_from_csv_file(model: Model, csv_str: str) -> dict:
     :param fields: list
     :return: dict
     """
-
+    # TODO: Remove all Columns which are not in Field List.
     df = pd.read_csv(csv_str)
     df.drop_duplicates(inplace=True)
     if model._meta.pk.name in df.columns:

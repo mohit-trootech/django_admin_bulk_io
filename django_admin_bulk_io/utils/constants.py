@@ -101,6 +101,7 @@ class BulkIOMessages:
     CSV_CREATED_SUCCESSFULLY = "CSV Generated Successfully,"
     CSV_IMPORTED_SUCCESSFULLY = "%s New records created."
     CSV_IMPORTED_WITH_EXCEPTIONS = "%s New records created with exceptions. %s"
+    CSV_VALIDATED_SUCCESSFULLY = "CSV Validated Successfully."
 
 
 class BulkIOException:

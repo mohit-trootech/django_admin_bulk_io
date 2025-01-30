@@ -152,8 +152,6 @@ class BulkValidateView(BulkImportValidateBase):
             data = validate_data_from_csv_file(model=self.model, csv_str=file)
             if not data:
                 raise InvalidCSVFile(BulkIOException.INVALID_CSV_FILE)
-            # create new df with existing columms and add new column validation which include details of each row validation
-            # if exception in row add list of exceptions else Validated
             serializer = self.get_serializer()
             validated_data = []
             for item in data:
@@ -164,8 +162,15 @@ class BulkValidateView(BulkImportValidateBase):
                 else:
                     item["validation"] = s.errors
                     validated_data.append(item)
+            import pandas as pd
 
-            return self.renderer.render_ok(data={})
+            csv = pd.DataFrame(validated_data).to_csv(index=False)
+            save_csv_file_in_base_dir(
+                csv_str=csv, info=(self.app_label, self.model_name)
+            )
+            return self.renderer.render_ok(
+                data={"message": BulkIOMessages.CSV_VALIDATED_SUCCESSFULLY}
+            )
         except EmptyFile as ef:
             return self.renderer.render_bad_request(data={"message": str(ef)})
         except FileTypeNotSupported as ftnse:

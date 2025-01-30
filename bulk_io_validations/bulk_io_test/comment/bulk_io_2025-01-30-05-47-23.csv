@@ -1,0 +1,10 @@
+title,description,starts_from,ends_on,validation
+diwali vaction,# Diwali Vacation,10/12/2025,15/12/2025,"{'created': [ErrorDetail(string='This field is required.', code='required')]}"
+diwali,# Diwali Vacation,10/12/2025,15/12/2025,"{'created': [ErrorDetail(string='This field is required.', code='required')]}"
+Holi,# Colors Festival,10/03/2025,15/03/2025,"{'created': [ErrorDetail(string='This field is required.', code='required')]}"
+Raksha Bandhan,# Sister Brother Bond,01/05/2025,03/05/2025,"{'created': [ErrorDetail(string='This field is required.', code='required')]}"
+Eid,# Eid Mubarak,01/10/2025,04/10/2025,"{'created': [ErrorDetail(string='This field is required.', code='required')]}"
+Christmas,# Yasu Yasu,09/02/2025,09/02/2025,"{'created': [ErrorDetail(string='This field is required.', code='required')]}"
+Hakuna Matata,# Tion pumba,05/09/2025,10/09/2025,"{'created': [ErrorDetail(string='This field is required.', code='required')]}"
+batman,# I am Vengence,1/5/2026,20/5/2026,"{'created': [ErrorDetail(string='This field is required.', code='required')]}"
+Simbha,# Lion King,01/01/2025,02/01/2025,"{'created': [ErrorDetail(string='This field is required.', code='required')]}"

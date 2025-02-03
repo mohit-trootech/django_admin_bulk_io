@@ -19,7 +19,7 @@ from django_admin_bulk_io.utils.constants import (
 from django_admin_bulk_io.utils.exceptions import (
     EmptyFile,
     FileTypeNotSupported,
-    InvalidCSVFile,
+    InvalidFileContent,
     RequestBodyEmpty,
 )
 from django_admin_bulk_io.utils.response import JsonResponseRenderer
@@ -99,9 +99,10 @@ class BulkImportView(BulkImportValidateBase):
     def post(self, request, *args, **kwargs):
         try:
             file = super(BulkImportView, self).post(request, *args, **kwargs)
+            data = NotImplementedError
             data = filter_data_from_csv(model=self.model, csv_str=file)
             if not data:
-                raise InvalidCSVFile(BulkIOException.INVALID_CSV_FILE)
+                raise InvalidFileContent(BulkIOException.INVALID_CSV_FILE)
             self.create_import_model_file(file=file)
             serializer = self.get_serializer()
             errors = []
@@ -126,7 +127,7 @@ class BulkImportView(BulkImportValidateBase):
             return self.renderer.render_bad_request(data={"message": str(ef)})
         except FileTypeNotSupported as ftnse:
             return self.renderer.render_bad_request(data={"message": str(ftnse)})
-        except InvalidCSVFile as icf:
+        except InvalidFileContent as icf:
             return self.renderer.render_bad_request(data={"message": str(icf)})
         except RequestBodyEmpty as rbe:
             return self.renderer.render_bad_request(data={"message": str(rbe)})
@@ -150,7 +151,7 @@ class BulkValidateView(BulkImportValidateBase):
             file = super(BulkValidateView, self).post(request, *args, **kwargs)
             data = validate_data_from_csv_file(model=self.model, csv_str=file)
             if not data:
-                raise InvalidCSVFile(BulkIOException.INVALID_CSV_FILE)
+                raise InvalidFileContent(BulkIOException.INVALID_CSV_FILE)
             errors = 0
             serializer = self.get_serializer()
             validated_data = []
@@ -181,7 +182,7 @@ class BulkValidateView(BulkImportValidateBase):
             return self.renderer.render_bad_request(data={"message": str(ef)})
         except FileTypeNotSupported as ftnse:
             return self.renderer.render_bad_request(data={"message": str(ftnse)})
-        except InvalidCSVFile as icf:
+        except InvalidFileContent as icf:
             return self.renderer.render_bad_request(data={"message": str(icf)})
         except RequestBodyEmpty as rbe:
             return self.renderer.render_bad_request(data={"message": str(rbe)})

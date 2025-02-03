@@ -12,7 +12,7 @@ class AcceptedTypes:
 
     @classmethod
     def get_accepted_types_list(cls) -> list:
-        return [cls.CSV]
+        return [cls.CSV, cls.JSON]
 
 
 class Keys:

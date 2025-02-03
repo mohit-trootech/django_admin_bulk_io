@@ -9,7 +9,7 @@ class FileTypeNotSupported(Exception):
     pass
 
 
-class InvalidCSVFile(Exception):
+class InvalidFileContent(Exception):
     pass
 
 

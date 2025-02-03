@@ -6,7 +6,6 @@ import pandas as pd
 from django.conf import settings
 from django.db.models import Model
 from django.utils.timezone import now
-
 from django_admin_bulk_io.utils.constants import FILE_NAME_TEMPLATE
 
 

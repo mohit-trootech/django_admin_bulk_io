@@ -24,9 +24,10 @@ from django_admin_bulk_io.utils.exceptions import (
 )
 from django_admin_bulk_io.utils.response import JsonResponseRenderer
 from django_admin_bulk_io.utils.utils import (
+    filter_data_from_csv,
     generate_csv_filename,
+    generate_csv_from_data,
     generate_csv_from_serialized_data,
-    get_data_from_csv_file,
     log_messages,
     save_csv_file_in_base_dir,
     validate_data_from_csv_file,
@@ -98,7 +99,7 @@ class BulkImportView(BulkImportValidateBase):
     def post(self, request, *args, **kwargs):
         try:
             file = super(BulkImportView, self).post(request, *args, **kwargs)
-            data = get_data_from_csv_file(model=self.model, csv_str=file)
+            data = filter_data_from_csv(model=self.model, csv_str=file)
             if not data:
                 raise InvalidCSVFile(BulkIOException.INVALID_CSV_FILE)
             self.create_import_model_file(file=file)
@@ -115,9 +116,7 @@ class BulkImportView(BulkImportValidateBase):
                 len(data) - len(errors),
             )
             if errors:
-                log_message = LogMessages.LOGGER_NOT_CONFIGURED
-                if logger:
-                    log_message = LogMessages.VIEW_LOG_FOR_DETAILS
+                log_message = LogMessages.VIEW_LOG_FOR_DETAILS
                 message = BulkIOMessages.CSV_IMPORTED_WITH_EXCEPTIONS % (
                     len(data) - len(errors),
                     log_message,
@@ -152,24 +151,31 @@ class BulkValidateView(BulkImportValidateBase):
             data = validate_data_from_csv_file(model=self.model, csv_str=file)
             if not data:
                 raise InvalidCSVFile(BulkIOException.INVALID_CSV_FILE)
+            errors = 0
             serializer = self.get_serializer()
             validated_data = []
             for item in data:
                 s = serializer(data=item)
                 if s.is_valid():
-                    item["validation"] = "Validated"
+                    item["action"] = "created"
                     validated_data.append(item)
                 else:
-                    item["validation"] = s.errors
+                    errors += 1
+                    item["action"] = "skipped"
+                    item["erros"] = ", ".join(
+                        [
+                            f"{field}:{error[0].code}"
+                            for field, error in s.errors.items()
+                        ]
+                    )
                     validated_data.append(item)
-            import pandas as pd
 
-            csv = pd.DataFrame(validated_data).to_csv(index=False)
+            csv = generate_csv_from_data(data=validated_data)
             save_csv_file_in_base_dir(
                 csv_str=csv, info=(self.app_label, self.model_name)
             )
             return self.renderer.render_ok(
-                data={"message": BulkIOMessages.CSV_VALIDATED_SUCCESSFULLY}
+                data={"message": BulkIOMessages.CSV_VALIDATED_SUCCESSFULLY % errors}
             )
         except EmptyFile as ef:
             return self.renderer.render_bad_request(data={"message": str(ef)})

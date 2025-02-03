@@ -5,7 +5,7 @@
 
 # Node artifact files
 node_modules/
-
+bulk_io_validations/*
 # Databases
 db.sqlite3
 

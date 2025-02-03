@@ -18,6 +18,15 @@ def log_messages(error: str, logger: Logger) -> None:
     logger(error)
 
 
+def generate_csv_from_data(data: list):
+    """
+    generate csv from data dict
+    :param data: list
+    :return: str
+    """
+    return pd.DataFrame(data).to_csv(index=False)
+
+
 def get_model_fields_info(model: Model) -> tuple[list[str], list[str]]:
     """
     This method returns required & optional fields for given model.
@@ -88,6 +97,37 @@ def save_csv_file_in_base_dir(csv_str: str, info: tuple) -> None:
     create_file()
 
 
+def clean_csv_data(csv_str: str, required: list, optional: list, model: Model):
+    """
+    clean `CSV` data
+    """
+    df = pd.read_csv(csv_str)
+    # Drop duplicates
+    df.drop_duplicates(inplace=True)
+    if model._meta.pk.name in df.columns:
+        # drop primary key column
+        df.drop(columns=[model._meta.pk.name], inplace=True)
+    for field in df.columns:
+        # iterate field of dataframe
+        if field not in [field.name for field in required + optional]:
+            # if field not in required & optional then drop column with field
+            df.drop(columns=[field], inplace=True)
+    for field in required + optional:
+        # iterate required & optional fields
+        if field.name in df.columns:
+            # if field in dataframe
+            if field.many_to_many:
+                # if field is many to many then literal_eval
+                df[field.name] = df[field.name].apply(lambda x: literal_eval(x))
+    for field in optional:
+        # iterate options fields
+        if field.name in df.columns:
+            # if field in dataframe and is nan then drop
+            if df[field.name].isna().any():
+                df.drop(columns=[field.name], inplace=True)
+    return df
+
+
 def validate_data_from_csv_file(model: Model, csv_str: str) -> dict:
     """
     import & clean csv file data for optional field and returns dict of data
@@ -96,19 +136,14 @@ def validate_data_from_csv_file(model: Model, csv_str: str) -> dict:
     :param csv_file: str
     :return: dict
     """
-    df = pd.read_csv(csv_str)
-    df.drop_duplicates(inplace=True)
-    if model._meta.pk.name in df.columns:
-        df.drop(columns=[model._meta.pk.name], inplace=True)
-    _, optional = get_model_fields_info(model=model)  # noqa
-    for field in optional:
-        if field.name in df.columns:
-            if df[field.name].isna().any():
-                df.drop(columns=[field.name], inplace=True)
+    required, optional = get_model_fields_info(model=model)
+    df = clean_csv_data(
+        csv_str=csv_str, required=required, optional=optional, model=model
+    )
     return df.to_dict(orient="records")
 
 
-def get_data_from_csv_file(model: Model, csv_str: str) -> dict:
+def filter_data_from_csv(model: Model, csv_str: str) -> dict:
     """
     import & clean csv file data and returns dict of data
     :param model: Model
@@ -116,21 +151,11 @@ def get_data_from_csv_file(model: Model, csv_str: str) -> dict:
     :param fields: list
     :return: dict
     """
-    # TODO: Remove all Columns which are not in Field List.
-    df = pd.read_csv(csv_str)
-    df.drop_duplicates(inplace=True)
-    if model._meta.pk.name in df.columns:
-        df.drop(columns=[model._meta.pk.name], inplace=True)
     required, optional = get_model_fields_info(model=model)
+    df = clean_csv_data(
+        csv_str=csv_str, required=required, optional=optional, model=model
+    )
     for field in required:
         if field.name in df.columns:
-            if field.many_to_many:
-                df[field.name] = df[field.name].apply(lambda x: literal_eval(x))
             df.dropna(subset=[field.name], inplace=True)
-    for field in optional:
-        if field.name in df.columns:
-            if field.many_to_many:
-                df[field.name] = df[field.name].apply(lambda x: literal_eval(x))
-            if df[field.name].isna().any():
-                df.drop(columns=[field.name], inplace=True)
     return df.to_dict(orient="records")

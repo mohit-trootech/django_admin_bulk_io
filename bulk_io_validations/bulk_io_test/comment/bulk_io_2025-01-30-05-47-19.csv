@@ -1,6 +1,0 @@
-created,modified,title,description,status,validation
-gawg,2025-01-20 07:04:36.699234+00:00,qh3h35h35h53h,h3qh4h55h3h345h4hehn54h54h4,1,"{'created': [ErrorDetail(string='Date has wrong format. Use one of these formats instead: YYYY-MM-DD.', code='invalid')]}"
-gawg,2025-01-20 07:04:36.699299+00:00,q4hh34,34h3jh53h,2,"{'status': [ErrorDetail(string='""2"" is not a valid choice.', code='invalid_choice')], 'created': [ErrorDetail(string='Date has wrong format. Use one of these formats instead: YYYY-MM-DD.', code='invalid')]}"
-gw,2025-01-20 07:04:36.699336+00:00,q3,qg3g,3,"{'status': [ErrorDetail(string='""3"" is not a valid choice.', code='invalid_choice')], 'created': [ErrorDetail(string='Date has wrong format. Use one of these formats instead: YYYY-MM-DD.', code='invalid')]}"
-2025-01-20,2025-01-20 07:04:36.699371+00:00,My First Comment,This is My Description,1,Validated
-2025-01-22,2025-01-22 13:01:16.531388+00:00,egega,geageg1,1,Validated

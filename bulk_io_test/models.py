@@ -1,13 +1,8 @@
+from django.db.models import CASCADE, DateField, ForeignKey, ManyToManyField
 from django_extensions.db.models import (
-    TitleDescriptionModel,
-    TimeStampedModel,
     ActivatorModel,
-)
-from django.db.models import (
-    DateField,
-    ForeignKey,
-    ManyToManyField,
-    CASCADE,
+    TimeStampedModel,
+    TitleDescriptionModel,
 )
 
 
@@ -24,7 +19,7 @@ class Comment(TitleDescriptionModel, TimeStampedModel, ActivatorModel):
 
 class Post(TitleDescriptionModel):
     comment = ForeignKey(Comment, on_delete=CASCADE)
-    likes = ManyToManyField("auth.User")
+    likes = ManyToManyField("auth.User", blank=True)
 
     def __str__(self):
         return self.title

@@ -5,7 +5,7 @@ from os import makedirs
 import pandas as pd
 from django.conf import settings
 from django.db.models import Model
-from django.utils.timezone import now
+from django.utils.timezone import localtime
 from django_admin_bulk_io.utils.constants import FILE_NAME_TEMPLATE
 
 
@@ -60,7 +60,7 @@ def generate_csv_filename() -> str:
     :return: str
     """
 
-    return f"bulk_io_{now().strftime('%Y-%m-%d-%H-%M-%S')}.csv"
+    return f"bulk_io_{localtime().strftime('%Y-%m-%d-%H-%M-%S')}.csv"
 
 
 def generate_csv_from_serialized_data(data: dict) -> str:
